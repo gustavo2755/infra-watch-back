@@ -22,6 +22,7 @@ final class MigrationsTest extends DatabaseTestCase
     public function testUsersTableHasExpectedColumns(): void
     {
         $cols = $this->getColumns('users');
+
         $expected = ['id', 'name', 'email', 'password', 'created_at', 'updated_at'];
 
         foreach ($expected as $col) {
@@ -49,6 +50,7 @@ final class MigrationsTest extends DatabaseTestCase
     public function testServersTableHasIndexesOnNameAndIsActive(): void
     {
         $stmt = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='servers' AND name LIKE 'idx_servers_%'");
+
         $indexes = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         $this->assertContains('idx_servers_name', $indexes);
@@ -94,6 +96,7 @@ final class MigrationsTest extends DatabaseTestCase
     public function testSeedServiceChecksWithSlugs(): void
     {
         $stmt = $this->pdo->query('SELECT slug FROM service_checks ORDER BY slug');
+
         $slugs = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         $this->assertContains('nginx', $slugs);
@@ -115,7 +118,9 @@ final class MigrationsTest extends DatabaseTestCase
     public function testUniqueIndexOnUsersEmail(): void
     {
         $this->pdo->exec('INSERT INTO users (name, email, created_at, updated_at) VALUES ("a", "a@b.com", datetime("now"), datetime("now"))');
+
         $this->expectException(\PDOException::class);
+
         $this->pdo->exec('INSERT INTO users (name, email, created_at, updated_at) VALUES ("b", "a@b.com", datetime("now"), datetime("now"))');
     }
 
@@ -131,6 +136,7 @@ final class MigrationsTest extends DatabaseTestCase
     private function getColumns(string $table): array
     {
         $stmt = $this->pdo->query("PRAGMA table_info($table)");
+
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_column($rows, 'name');
@@ -142,6 +148,7 @@ final class MigrationsTest extends DatabaseTestCase
     private function getPrimaryKey(string $table): array
     {
         $stmt = $this->pdo->query("PRAGMA table_info($table)");
+
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $pk = [];
 

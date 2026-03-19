@@ -23,7 +23,9 @@ final class UserSeeder
         }
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
+
         $now = $this->now();
+
         $stmt = $this->pdo->prepare("INSERT INTO users (name, email, password, created_at, updated_at) VALUES (?, ?, ?, $now, $now)");
         $stmt->execute(['Admin', $email, $hash]);
     }

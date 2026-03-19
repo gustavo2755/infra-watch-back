@@ -21,6 +21,7 @@ final class ServiceCheckRepositoryTest extends DatabaseTestCase
     public function testCreateAndFindById(): void
     {
         $sc = new ServiceCheck(null, 'Redis', 'redis', 'Cache server');
+
         $id = $this->repository->create($sc);
 
         $this->assertGreaterThan(0, $id);
@@ -43,6 +44,7 @@ final class ServiceCheckRepositoryTest extends DatabaseTestCase
     public function testUpdate(): void
     {
         $sc = new ServiceCheck(null, 'Redis', 'redis', 'Cache');
+
         $id = $this->repository->create($sc);
         $sc->setId($id);
         $sc->setDescription('Redis cache server');

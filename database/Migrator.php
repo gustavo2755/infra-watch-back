@@ -23,6 +23,7 @@ final class Migrator
         }
 
         $this->createMigrationsTable();
+
         $files = glob($this->migrationsPath . '/*.php');
         sort($files);
 
@@ -71,13 +72,16 @@ final class Migrator
     private function isMigrated(string $name): bool
     {
         $stmt = $this->pdo->prepare('SELECT 1 FROM migrations WHERE name = ?');
+
         $stmt->execute([$name]);
+
         return (bool) $stmt->fetch();
     }
 
     private function markMigrated(string $name): void
     {
         $stmt = $this->pdo->prepare('INSERT INTO migrations (name) VALUES (?)');
+
         $stmt->execute([$name]);
     }
 }

@@ -13,6 +13,7 @@ final class BaseRepositoryTest extends DatabaseTestCase
     {
         $repo = new class($this->pdo) extends BaseRepository {
         };
+
         $result = $this->pdo->query('SELECT 1')->fetchColumn();
 
         $this->assertSame(1, (int) $result);
@@ -21,12 +22,14 @@ final class BaseRepositoryTest extends DatabaseTestCase
     public function testExecuteThrowsOnInvalidSql(): void
     {
         $this->expectException(\PDOException::class);
+
         $repo = new class($this->pdo) extends BaseRepository {
             public function runInvalid(): void
             {
                 $this->execute('SELECT * FROM nonexistent_table_xyz_123');
             }
         };
+
         $repo->runInvalid();
     }
 }

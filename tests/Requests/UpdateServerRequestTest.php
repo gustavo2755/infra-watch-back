@@ -21,7 +21,9 @@ final class UpdateServerRequestTest extends TestCase
     public function testPartialPayloadValid(): void
     {
         $data = ['name' => 'Updated Name', 'is_active' => false];
+
         $result = $this->request->validate($data);
+
         $this->assertSame('Updated Name', $result['name']);
         $this->assertFalse($result['is_active']);
         $this->assertCount(2, $result);
@@ -30,6 +32,7 @@ final class UpdateServerRequestTest extends TestCase
     public function testInvalidFieldType(): void
     {
         $data = ['name' => 123];
+
         $this->expectException(ValidationException::class);
         $this->request->validate($data);
     }
@@ -37,6 +40,7 @@ final class UpdateServerRequestTest extends TestCase
     public function testInvalidBoolean(): void
     {
         $data = ['is_active' => 'yes'];
+
         $this->expectException(ValidationException::class);
         $this->request->validate($data);
     }
@@ -44,6 +48,7 @@ final class UpdateServerRequestTest extends TestCase
     public function testInvalidInteger(): void
     {
         $data = ['check_interval_seconds' => 'sixty'];
+
         $this->expectException(ValidationException::class);
         $this->request->validate($data);
     }
@@ -51,13 +56,16 @@ final class UpdateServerRequestTest extends TestCase
     public function testEmptyPayloadValid(): void
     {
         $result = $this->request->validate([]);
+
         $this->assertSame([], $result);
     }
 
     public function testValidBooleanFromString(): void
     {
         $data = ['is_active' => '1'];
+
         $result = $this->request->validate($data);
+
         $this->assertTrue($result['is_active']);
     }
 }

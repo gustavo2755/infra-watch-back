@@ -21,7 +21,9 @@ final class StoreServiceCheckRequestTest extends TestCase
     public function testValidPayload(): void
     {
         $data = ['name' => 'Nginx', 'slug' => 'nginx', 'description' => 'Web server'];
+
         $result = $this->request->validate($data);
+
         $this->assertSame('Nginx', $result['name']);
         $this->assertSame('nginx', $result['slug']);
         $this->assertSame('Web server', $result['description']);
@@ -54,7 +56,9 @@ final class StoreServiceCheckRequestTest extends TestCase
     public function testValidWithoutDescription(): void
     {
         $data = ['name' => 'Nginx', 'slug' => 'nginx'];
+
         $result = $this->request->validate($data);
+
         $this->assertNull($result['description']);
     }
 }

@@ -16,12 +16,14 @@ final class ServiceCheckSeeder
     public function run(): void
     {
         $now = $this->now();
+
         $checks = [
             ['Nginx', 'nginx', 'Web server'],
             ['MySQL', 'mysql', 'Database server'],
             ['Apache', 'apache2', 'Web server'],
             ['PHP-FPM', 'php-fpm', 'PHP process manager'],
         ];
+
         $stmt = $this->pdo->prepare("INSERT INTO service_checks (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, $now, $now)");
 
         foreach ($checks as $check) {

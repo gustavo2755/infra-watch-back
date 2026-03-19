@@ -21,6 +21,7 @@ final class ServerRepositoryTest extends DatabaseTestCase
     public function testCreateAndFindById(): void
     {
         $server = new Server(null, 'Web Server', 'Main web', '192.168.1.1');
+
         $id = $this->repository->create($server);
 
         $this->assertGreaterThan(0, $id);
@@ -36,6 +37,7 @@ final class ServerRepositoryTest extends DatabaseTestCase
     public function testUpdate(): void
     {
         $server = new Server(null, 'Original', null, '10.0.0.1');
+
         $id = $this->repository->create($server);
         $server->setId($id);
         $server->setName('Updated Name');
@@ -86,6 +88,7 @@ final class ServerRepositoryTest extends DatabaseTestCase
         $s1->setIsActive(true);
         $s2 = new Server(null, 'Inactive', null, '2.2.2.2');
         $s2->setIsActive(false);
+
         $this->repository->create($s1);
         $this->repository->create($s2);
 
@@ -99,8 +102,10 @@ final class ServerRepositoryTest extends DatabaseTestCase
     public function testCreateFailsWhenForeignKeyViolated(): void
     {
         $this->expectException(\PDOException::class);
+
         $server = new Server(null, 'Test', null, '1.1.1.1');
         $server->setCreatedBy(99999);
+
         $this->repository->create($server);
     }
 }

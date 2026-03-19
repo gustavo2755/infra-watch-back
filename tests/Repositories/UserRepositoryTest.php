@@ -21,6 +21,7 @@ final class UserRepositoryTest extends DatabaseTestCase
     public function testCreateAndFindById(): void
     {
         $user = new User(null, 'Test User', 'test@example.com', 'hashed');
+
         $id = $this->repository->create($user);
 
         $this->assertGreaterThan(0, $id);

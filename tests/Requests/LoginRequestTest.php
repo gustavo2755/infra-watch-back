@@ -21,7 +21,9 @@ final class LoginRequestTest extends TestCase
     public function testValidPayload(): void
     {
         $data = ['email' => 'user@example.com', 'password' => 'secret123'];
+
         $result = $this->request->validate($data);
+
         $this->assertSame('user@example.com', $result['email']);
         $this->assertSame('secret123', $result['password']);
     }

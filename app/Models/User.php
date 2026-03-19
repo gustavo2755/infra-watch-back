@@ -97,4 +97,19 @@ final class User
         $this->updatedAt = $updatedAt;
         return $this;
     }
+
+    /**
+     * @param array{name?: string|null, email: string, password: string} $data Validated payload
+     */
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            null,
+            $data['name'] ?? null,
+            $data['email'],
+            $data['password'],
+            null,
+            null
+        );
+    }
 }

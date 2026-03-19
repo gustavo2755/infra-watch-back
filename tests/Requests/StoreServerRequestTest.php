@@ -47,7 +47,9 @@ final class StoreServerRequestTest extends TestCase
     public function testValidPayload(): void
     {
         $data = $this->validPayload();
+
         $result = $this->request->validate($data);
+
         $this->assertSame('Server 1', $result['name']);
         $this->assertSame('192.168.1.1', $result['ip_address']);
         $this->assertSame(1, $result['created_by']);
@@ -57,6 +59,7 @@ final class StoreServerRequestTest extends TestCase
     {
         $data = $this->validPayload();
         unset($data['name']);
+
         $this->expectException(ValidationException::class);
         $this->request->validate($data);
     }
@@ -65,6 +68,7 @@ final class StoreServerRequestTest extends TestCase
     {
         $data = $this->validPayload();
         $data['ip_address'] = '999.999.999.999';
+
         $this->expectException(ValidationException::class);
         $this->request->validate($data);
     }
@@ -73,6 +77,7 @@ final class StoreServerRequestTest extends TestCase
     {
         $data = $this->validPayload();
         $data['is_active'] = 'invalid';
+
         $this->expectException(ValidationException::class);
         $this->request->validate($data);
     }
@@ -81,6 +86,7 @@ final class StoreServerRequestTest extends TestCase
     {
         $data = $this->validPayload();
         $data['check_interval_seconds'] = 'not-a-number';
+
         $this->expectException(ValidationException::class);
         $this->request->validate($data);
     }
@@ -89,6 +95,7 @@ final class StoreServerRequestTest extends TestCase
     {
         $data = $this->validPayload();
         $data['name'] = 123;
+
         $this->expectException(ValidationException::class);
         $this->request->validate($data);
     }
@@ -103,7 +110,9 @@ final class StoreServerRequestTest extends TestCase
     {
         $data = $this->validPayload();
         $data['last_check_at'] = '2024-01-15 10:30:00';
+
         $result = $this->request->validate($data);
+
         $this->assertSame('2024-01-15 10:30:00', $result['last_check_at']);
     }
 }
