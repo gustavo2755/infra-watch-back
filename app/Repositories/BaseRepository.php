@@ -31,7 +31,9 @@ abstract class BaseRepository
     protected function execute(string $sql, array $params = []): \PDOStatement
     {
         $stmt = $this->pdo->prepare($sql);
+
         $stmt->execute($params);
+
         return $stmt;
     }
 
@@ -43,6 +45,7 @@ abstract class BaseRepository
     {
         $stmt = $this->execute($sql, $params);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
         return $row ?: false;
     }
 
@@ -54,6 +57,7 @@ abstract class BaseRepository
     {
         $stmt = $this->execute($sql, $params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
         return $rows !== false ? $rows : [];
     }
 

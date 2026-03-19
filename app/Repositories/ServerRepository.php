@@ -17,6 +17,7 @@ final class ServerRepository extends BaseRepository
     public function findById(int $id): ?Server
     {
         $row = $this->fetchOne('SELECT ' . self::COLUMNS . ' FROM servers WHERE id = ?', [$id]);
+
         return $row ? $this->mapRowToServer($row) : null;
     }
 
@@ -51,6 +52,7 @@ final class ServerRepository extends BaseRepository
                 $server->getCreatedBy(),
             ]
         );
+
         return $this->lastInsertId();
     }
 
@@ -86,6 +88,7 @@ final class ServerRepository extends BaseRepository
                 $server->getId(),
             ]
         );
+
         return (int) $server->getId();
     }
 
@@ -95,6 +98,7 @@ final class ServerRepository extends BaseRepository
     public function list(): array
     {
         $rows = $this->fetchAll('SELECT ' . self::COLUMNS . ' FROM servers ORDER BY id');
+
         return array_map(fn (array $r) => $this->mapRowToServer($r), $rows);
     }
 
@@ -104,6 +108,7 @@ final class ServerRepository extends BaseRepository
     public function filterByName(string $name): array
     {
         $rows = $this->fetchAll('SELECT ' . self::COLUMNS . ' FROM servers WHERE name LIKE ? ORDER BY id', ['%' . $name . '%']);
+
         return array_map(fn (array $r) => $this->mapRowToServer($r), $rows);
     }
 
@@ -113,6 +118,7 @@ final class ServerRepository extends BaseRepository
     public function filterByIsActive(bool $isActive): array
     {
         $rows = $this->fetchAll('SELECT ' . self::COLUMNS . ' FROM servers WHERE is_active = ? ORDER BY id', [$isActive ? 1 : 0]);
+
         return array_map(fn (array $r) => $this->mapRowToServer($r), $rows);
     }
 

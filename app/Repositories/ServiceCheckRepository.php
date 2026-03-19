@@ -15,12 +15,14 @@ final class ServiceCheckRepository extends BaseRepository
     public function findById(int $id): ?ServiceCheck
     {
         $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE id = ?', [$id]);
+
         return $row ? $this->mapRowToServiceCheck($row) : null;
     }
 
     public function findBySlug(string $slug): ?ServiceCheck
     {
         $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE slug = ?', [$slug]);
+
         return $row ? $this->mapRowToServiceCheck($row) : null;
     }
 
@@ -34,6 +36,7 @@ final class ServiceCheckRepository extends BaseRepository
             "INSERT INTO service_checks (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, $now, $now)",
             [$serviceCheck->getName(), $serviceCheck->getSlug(), $serviceCheck->getDescription()]
         );
+
         return $this->lastInsertId();
     }
 
@@ -47,6 +50,7 @@ final class ServiceCheckRepository extends BaseRepository
             "UPDATE service_checks SET name = ?, slug = ?, description = ?, updated_at = $now WHERE id = ?",
             [$serviceCheck->getName(), $serviceCheck->getSlug(), $serviceCheck->getDescription(), $serviceCheck->getId()]
         );
+
         return (int) $serviceCheck->getId();
     }
 
@@ -56,6 +60,7 @@ final class ServiceCheckRepository extends BaseRepository
     public function list(): array
     {
         $rows = $this->fetchAll('SELECT id, name, slug, description, created_at, updated_at FROM service_checks ORDER BY id');
+
         return array_map(fn (array $r) => $this->mapRowToServiceCheck($r), $rows);
     }
 

@@ -22,9 +22,11 @@ final class ServerRepositoryTest extends DatabaseTestCase
     {
         $server = new Server(null, 'Web Server', 'Main web', '192.168.1.1');
         $id = $this->repository->create($server);
+
         $this->assertGreaterThan(0, $id);
 
         $found = $this->repository->findById($id);
+
         $this->assertNotNull($found);
         $this->assertSame($id, $found->getId());
         $this->assertSame('Web Server', $found->getName());
@@ -42,6 +44,7 @@ final class ServerRepositoryTest extends DatabaseTestCase
         $this->repository->update($server);
 
         $found = $this->repository->findById($id);
+
         $this->assertNotNull($found);
         $this->assertSame('Updated Name', $found->getName());
         $this->assertSame('10.0.0.2', $found->getIpAddress());
@@ -50,12 +53,14 @@ final class ServerRepositoryTest extends DatabaseTestCase
     public function testFindByIdReturnsNullWhenNotFound(): void
     {
         $found = $this->repository->findById(99999);
+
         $this->assertNull($found);
     }
 
     public function testList(): void
     {
         $servers = $this->repository->list();
+
         $this->assertIsArray($servers);
     }
 
@@ -66,8 +71,11 @@ final class ServerRepositoryTest extends DatabaseTestCase
         $this->repository->create(new Server(null, 'Alpha Backup', null, '3.3.3.3'));
 
         $results = $this->repository->filterByName('Alpha');
+
         $this->assertCount(2, $results);
+
         $names = array_map(fn (Server $s) => $s->getName(), $results);
+
         $this->assertContains('Alpha Server', $names);
         $this->assertContains('Alpha Backup', $names);
     }

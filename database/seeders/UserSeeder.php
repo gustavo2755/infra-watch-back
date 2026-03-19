@@ -17,9 +17,11 @@ final class UserSeeder
     {
         $email = $_ENV['SEED_ADMIN_EMAIL'] ?? null;
         $password = $_ENV['SEED_ADMIN_PASSWORD'] ?? null;
+
         if (!$email || !$password) {
             return;
         }
+
         $hash = password_hash($password, PASSWORD_DEFAULT);
         $now = $this->now();
         $stmt = $this->pdo->prepare("INSERT INTO users (name, email, password, created_at, updated_at) VALUES (?, ?, ?, $now, $now)");

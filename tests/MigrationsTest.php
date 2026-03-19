@@ -11,6 +11,7 @@ final class MigrationsTest extends DatabaseTestCase
     public function testTablesAreCreated(): void
     {
         $tables = ['users', 'servers', 'service_checks', 'server_service_checks'];
+
         foreach ($tables as $table) {
             $stmt = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='$table'");
             $row = $stmt->fetch();
@@ -22,6 +23,7 @@ final class MigrationsTest extends DatabaseTestCase
     {
         $cols = $this->getColumns('users');
         $expected = ['id', 'name', 'email', 'password', 'created_at', 'updated_at'];
+
         foreach ($expected as $col) {
             $this->assertContains($col, $cols, "users should have column $col");
         }
@@ -30,6 +32,7 @@ final class MigrationsTest extends DatabaseTestCase
     public function testServersTableHasExpectedColumns(): void
     {
         $cols = $this->getColumns('servers');
+
         $expected = [
             'id', 'name', 'description', 'ip_address', 'is_active', 'monitor_resources',
             'cpu_total', 'ram_total', 'disk_total', 'check_interval_seconds', 'last_check_at',
@@ -37,6 +40,7 @@ final class MigrationsTest extends DatabaseTestCase
             'bandwidth_alert_threshold', 'alert_cpu_enabled', 'alert_ram_enabled', 'alert_disk_enabled',
             'alert_bandwidth_enabled', 'created_by', 'created_at', 'updated_at'
         ];
+
         foreach ($expected as $col) {
             $this->assertContains($col, $cols, "servers should have column $col");
         }
@@ -46,6 +50,7 @@ final class MigrationsTest extends DatabaseTestCase
     {
         $stmt = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='servers' AND name LIKE 'idx_servers_%'");
         $indexes = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
         $this->assertContains('idx_servers_name', $indexes);
         $this->assertContains('idx_servers_is_active', $indexes);
     }
@@ -53,6 +58,7 @@ final class MigrationsTest extends DatabaseTestCase
     public function testServiceChecksTableHasSlugNotCheckCommand(): void
     {
         $cols = $this->getColumns('service_checks');
+
         $this->assertContains('slug', $cols);
         $this->assertNotContains('check_command', $cols);
     }
@@ -60,7 +66,9 @@ final class MigrationsTest extends DatabaseTestCase
     public function testServiceChecksTableHasExpectedColumns(): void
     {
         $cols = $this->getColumns('service_checks');
+
         $expected = ['id', 'name', 'slug', 'description', 'created_at', 'updated_at'];
+
         foreach ($expected as $col) {
             $this->assertContains($col, $cols, "service_checks should have column $col");
         }
@@ -69,6 +77,7 @@ final class MigrationsTest extends DatabaseTestCase
     public function testServerServiceChecksHasCompositePrimaryKey(): void
     {
         $pk = $this->getPrimaryKey('server_service_checks');
+
         $this->assertNotEmpty($pk);
         $this->assertContains('server_id', $pk);
         $this->assertContains('service_check_id', $pk);
@@ -77,6 +86,7 @@ final class MigrationsTest extends DatabaseTestCase
     public function testServerServiceChecksHasTimestamps(): void
     {
         $cols = $this->getColumns('server_service_checks');
+
         $this->assertContains('created_at', $cols);
         $this->assertContains('updated_at', $cols);
     }
@@ -85,6 +95,7 @@ final class MigrationsTest extends DatabaseTestCase
     {
         $stmt = $this->pdo->query('SELECT slug FROM service_checks ORDER BY slug');
         $slugs = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
         $this->assertContains('nginx', $slugs);
         $this->assertContains('mysql', $slugs);
         $this->assertContains('apache2', $slugs);
@@ -95,7 +106,9 @@ final class MigrationsTest extends DatabaseTestCase
     {
         $this->pdo->exec('INSERT INTO servers (name, ip_address, created_at, updated_at) VALUES ("test", "127.0.0.1", datetime("now"), datetime("now"))');
         $this->pdo->exec('INSERT INTO server_service_checks (server_id, service_check_id, created_at, updated_at) VALUES (1, 1, datetime("now"), datetime("now"))');
+
         $stmt = $this->pdo->query('SELECT 1 FROM server_service_checks WHERE server_id = 1 AND service_check_id = 1');
+
         $this->assertNotFalse($stmt->fetch());
     }
 
@@ -119,6 +132,7 @@ final class MigrationsTest extends DatabaseTestCase
     {
         $stmt = $this->pdo->query("PRAGMA table_info($table)");
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
         return array_column($rows, 'name');
     }
 
@@ -130,11 +144,13 @@ final class MigrationsTest extends DatabaseTestCase
         $stmt = $this->pdo->query("PRAGMA table_info($table)");
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $pk = [];
+
         foreach ($rows as $row) {
             if ((int) $row['pk'] > 0) {
                 $pk[] = $row['name'];
             }
         }
+
         return $pk;
     }
 }

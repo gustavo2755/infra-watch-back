@@ -14,6 +14,7 @@ final class BaseRepositoryTest extends DatabaseTestCase
         $repo = new class($this->pdo) extends BaseRepository {
         };
         $result = $this->pdo->query('SELECT 1')->fetchColumn();
+
         $this->assertSame(1, (int) $result);
     }
 

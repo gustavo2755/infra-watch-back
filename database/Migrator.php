@@ -17,6 +17,7 @@ final class Migrator
     public function run(): void
     {
         $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+
         if ($driver === 'sqlite') {
             $this->pdo->exec('PRAGMA foreign_keys = ON');
         }
@@ -27,13 +28,17 @@ final class Migrator
 
         foreach ($files as $file) {
             $name = basename($file, '.php');
+
             if ($this->isMigrated($name)) {
                 continue;
             }
+
             $migration = require $file;
+
             if (is_callable($migration)) {
                 $migration($this->pdo, $driver);
             }
+
             $this->markMigrated($name);
         }
     }
@@ -41,6 +46,7 @@ final class Migrator
     public function fresh(): void
     {
         $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+
         if ($driver === 'sqlite') {
             $tables = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name != 'sqlite_sequence'")->fetchAll(PDO::FETCH_COLUMN);
         } else {
@@ -49,9 +55,11 @@ final class Migrator
             $tables = $result ? $result->fetchAll(PDO::FETCH_COLUMN) : [];
             $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
         }
+
         foreach ($tables as $table) {
             $this->pdo->exec("DROP TABLE IF EXISTS `$table`");
         }
+
         $this->pdo->exec('DROP TABLE IF EXISTS migrations');
     }
 

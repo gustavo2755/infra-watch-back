@@ -23,6 +23,7 @@ final class ServiceCheckSeeder
             ['PHP-FPM', 'php-fpm', 'PHP process manager'],
         ];
         $stmt = $this->pdo->prepare("INSERT INTO service_checks (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, $now, $now)");
+
         foreach ($checks as $check) {
             $stmt->execute($check);
         }
