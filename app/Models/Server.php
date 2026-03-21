@@ -32,6 +32,7 @@ final class Server
     private ?int $createdBy = null;
     private ?string $createdAt = null;
     private ?string $updatedAt = null;
+    private ?string $deletedAt = null;
 
     public function __construct(
         ?int $id = null,
@@ -56,7 +57,8 @@ final class Server
         bool $alertBandwidthEnabled = true,
         ?int $createdBy = null,
         ?string $createdAt = null,
-        ?string $updatedAt = null
+        ?string $updatedAt = null,
+        ?string $deletedAt = null
     ) {
         $this->id = $id;
         $this->name = $name;
@@ -81,6 +83,7 @@ final class Server
         $this->createdBy = $createdBy;
         $this->createdAt = $createdAt;
         $this->updatedAt = $updatedAt;
+        $this->deletedAt = $deletedAt;
     }
 
     public function getId(): ?int
@@ -336,6 +339,17 @@ final class Server
         return $this;
     }
 
+    public function getDeletedAt(): ?string
+    {
+        return $this->deletedAt;
+    }
+
+    public function setDeletedAt(?string $deletedAt): self
+    {
+        $this->deletedAt = $deletedAt;
+        return $this;
+    }
+
     /**
      * @param array<string, mixed> $data Validated payload (e.g. from StoreServerRequest)
      */
@@ -363,6 +377,7 @@ final class Server
             isset($data['alert_disk_enabled']) ? (bool) $data['alert_disk_enabled'] : true,
             isset($data['alert_bandwidth_enabled']) ? (bool) $data['alert_bandwidth_enabled'] : true,
             isset($data['created_by']) ? (int) $data['created_by'] : null,
+            null,
             null,
             null
         );

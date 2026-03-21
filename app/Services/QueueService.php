@@ -9,7 +9,8 @@ use App\Repositories\MonitoringQueueRepository;
 use SplQueue;
 
 /**
- * Service responsible for in-memory queue orchestration for monitoring jobs.
+ * Operates the in-memory monitoring queue with SplQueue.
+ * Enqueues eligible servers, processes jobs one at a time, and respects a 30-second cooldown window.
  */
 final class QueueService
 {

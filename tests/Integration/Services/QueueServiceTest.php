@@ -99,6 +99,32 @@ final class QueueServiceTest extends DatabaseTestCase
         $this->assertSame(1, $thirdProcessed);
     }
 
+    public function testProcessNextCreatesMonitoringLog(): void
+    {
+        $serverId = $this->createServer('srv-a', '10.0.0.38', 1, null);
+        $this->service->enqueueEligibleServers();
+
+        $before = $this->pdo->query("SELECT COUNT(*) FROM monitoring_logs WHERE server_id = $serverId")->fetchColumn();
+        $this->assertSame(0, (int) $before);
+
+        $this->service->processNext();
+
+        $after = $this->pdo->query("SELECT COUNT(*) FROM monitoring_logs WHERE server_id = $serverId")->fetchColumn();
+        $this->assertSame(1, (int) $after);
+    }
+
+    public function testProcessNextRemovesJobFromQueue(): void
+    {
+        $this->createServer('srv-a', '10.0.0.39', 1, null);
+        $this->service->enqueueEligibleServers();
+
+        $this->assertSame(1, $this->service->getQueueSize());
+
+        $this->service->processNext();
+
+        $this->assertSame(0, $this->service->getQueueSize());
+    }
+
     private function createServer(string $name, string $ipAddress, int $isActive, ?string $lastCheckAtExpression): int
     {
         $lastCheckAt = $lastCheckAtExpression === null ? 'NULL' : $lastCheckAtExpression;

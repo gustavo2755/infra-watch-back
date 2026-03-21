@@ -16,6 +16,7 @@ final class ServiceCheck
     private ?string $description = null;
     private ?string $createdAt = null;
     private ?string $updatedAt = null;
+    private ?string $deletedAt = null;
 
     public function __construct(
         ?int $id = null,
@@ -23,7 +24,8 @@ final class ServiceCheck
         ?string $slug = null,
         ?string $description = null,
         ?string $createdAt = null,
-        ?string $updatedAt = null
+        ?string $updatedAt = null,
+        ?string $deletedAt = null
     ) {
         $this->id = $id;
         $this->name = $name;
@@ -31,6 +33,7 @@ final class ServiceCheck
         $this->description = $description;
         $this->createdAt = $createdAt;
         $this->updatedAt = $updatedAt;
+        $this->deletedAt = $deletedAt;
     }
 
     public function getId(): ?int
@@ -99,6 +102,17 @@ final class ServiceCheck
         return $this;
     }
 
+    public function getDeletedAt(): ?string
+    {
+        return $this->deletedAt;
+    }
+
+    public function setDeletedAt(?string $deletedAt): self
+    {
+        $this->deletedAt = $deletedAt;
+        return $this;
+    }
+
     /**
      * @param array{name: string, slug: string, description?: string|null} $data Validated payload (e.g. from StoreServiceCheckRequest)
      */
@@ -109,6 +123,7 @@ final class ServiceCheck
             $data['name'],
             $data['slug'],
             $data['description'] ?? null,
+            null,
             null,
             null
         );

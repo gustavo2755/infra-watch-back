@@ -105,6 +105,88 @@ final class MonitoringServiceTest extends DatabaseTestCase
         $this->assertSame(1, (int) $isAlert);
     }
 
+    public function testMonitorResourcesFalseDoesNotGenerateMetrics(): void
+    {
+        $serverId = $this->createServerWithoutResourceMonitoring();
+        $server = $this->serverRepository->findById($serverId);
+        $this->assertNotNull($server);
+
+        $log = $this->service->processServer($server);
+
+        $this->assertNotNull($log->getId());
+        $this->assertTrue($log->getIsUp());
+
+        $row = $this->pdo->query("SELECT cpu_usage_percent, ram_usage_percent, disk_usage_percent, bandwidth_usage_percent, is_alert, alert_type FROM monitoring_logs WHERE id = {$log->getId()}")->fetch(\PDO::FETCH_ASSOC);
+        $this->assertNotFalse($row);
+        $this->assertNull($row['cpu_usage_percent']);
+        $this->assertNull($row['ram_usage_percent']);
+        $this->assertNull($row['disk_usage_percent']);
+        $this->assertNull($row['bandwidth_usage_percent']);
+        $this->assertSame(0, (int) $row['is_alert']);
+        $this->assertNull($row['alert_type']);
+    }
+
+    public function testMonitorResourcesFalseStillCreatesLogWithIsUp(): void
+    {
+        $serverId = $this->createServerWithoutResourceMonitoring();
+        $server = $this->serverRepository->findById($serverId);
+        $this->assertNotNull($server);
+
+        $log = $this->service->processServer($server);
+
+        $this->assertNotNull($log->getId());
+        $row = $this->pdo->query("SELECT checked_at, is_up FROM monitoring_logs WHERE id = {$log->getId()}")->fetch(\PDO::FETCH_ASSOC);
+        $this->assertNotFalse($row);
+        $this->assertNotNull($row['checked_at']);
+        $this->assertSame(1, (int) $row['is_up']);
+    }
+
+    public function testMonitorResourcesFalseStillUpdatesLastCheckAt(): void
+    {
+        $serverId = $this->createServerWithoutResourceMonitoring();
+        $before = $this->pdo->query("SELECT last_check_at FROM servers WHERE id = $serverId")->fetchColumn();
+        $this->assertNull($before);
+
+        $server = $this->serverRepository->findById($serverId);
+        $this->assertNotNull($server);
+        $this->service->processServer($server);
+
+        $after = $this->pdo->query("SELECT last_check_at FROM servers WHERE id = $serverId")->fetchColumn();
+        $this->assertNotNull($after);
+    }
+
+    public function testMonitorResourcesFalseStillCreatesServiceCheckResults(): void
+    {
+        $serverId = $this->createServerWithoutResourceMonitoring();
+        $this->linkServiceCheck($serverId, 'nginx');
+        $server = $this->serverRepository->findById($serverId);
+        $this->assertNotNull($server);
+
+        $log = $this->service->processServer($server);
+
+        $logId = (int) $log->getId();
+        $count = $this->pdo->query("SELECT COUNT(*) FROM monitoring_log_service_checks WHERE monitoring_log_id = $logId")->fetchColumn();
+        $this->assertSame(1, (int) $count);
+    }
+
+    public function testThresholdsOnlyTriggerAlertWhenMonitorResourcesIsTrue(): void
+    {
+        $serverWithResources = $this->createServerWithThresholds(-1, -1, -1, -1);
+        $serverWithoutResources = $this->createServerWithoutResourceMonitoring(-1, -1, -1, -1);
+
+        $serverA = $this->serverRepository->findById($serverWithResources);
+        $this->assertNotNull($serverA);
+        $logA = $this->service->processServer($serverA);
+        $isAlertA = $this->pdo->query("SELECT is_alert FROM monitoring_logs WHERE id = {$logA->getId()}")->fetchColumn();
+        $this->assertSame(1, (int) $isAlertA);
+
+        $serverB = $this->serverRepository->findById($serverWithoutResources);
+        $this->assertNotNull($serverB);
+        $logB = $this->service->processServer($serverB);
+        $isAlertB = $this->pdo->query("SELECT is_alert FROM monitoring_logs WHERE id = {$logB->getId()}")->fetchColumn();
+        $this->assertSame(0, (int) $isAlertB);
+    }
+
     public function testThrowsWhenPersistenceFails(): void
     {
         $serverId = $this->createServerWithThresholds(100, 100, 100, 100);
@@ -122,6 +204,13 @@ final class MonitoringServiceTest extends DatabaseTestCase
     private function createServerWithThresholds(float $cpuThreshold, float $ramThreshold, float $diskThreshold, float $bandwidthThreshold): int
     {
         $this->pdo->exec("INSERT INTO servers (name, ip_address, is_active, monitor_resources, cpu_total, ram_total, disk_total, check_interval_seconds, retention_days, cpu_alert_threshold, ram_alert_threshold, disk_alert_threshold, bandwidth_alert_threshold, alert_cpu_enabled, alert_ram_enabled, alert_disk_enabled, alert_bandwidth_enabled, created_at, updated_at) VALUES ('srv-monitor', '10.0.0.20', 1, 1, 8, 16, 100, 60, 30, $cpuThreshold, $ramThreshold, $diskThreshold, $bandwidthThreshold, 1, 1, 1, 1, datetime('now'), datetime('now'))");
+
+        return (int) $this->pdo->lastInsertId();
+    }
+
+    private function createServerWithoutResourceMonitoring(float $cpuThreshold = 100, float $ramThreshold = 100, float $diskThreshold = 100, float $bandwidthThreshold = 100): int
+    {
+        $this->pdo->exec("INSERT INTO servers (name, ip_address, is_active, monitor_resources, cpu_total, ram_total, disk_total, check_interval_seconds, retention_days, cpu_alert_threshold, ram_alert_threshold, disk_alert_threshold, bandwidth_alert_threshold, alert_cpu_enabled, alert_ram_enabled, alert_disk_enabled, alert_bandwidth_enabled, created_at, updated_at) VALUES ('srv-noresource', '10.0.0.30', 1, 0, 8, 16, 100, 60, 30, $cpuThreshold, $ramThreshold, $diskThreshold, $bandwidthThreshold, 1, 1, 1, 1, datetime('now'), datetime('now'))");
 
         return (int) $this->pdo->lastInsertId();
     }

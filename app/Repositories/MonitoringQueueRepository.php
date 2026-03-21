@@ -12,7 +12,7 @@ use PDOException;
  */
 final class MonitoringQueueRepository extends BaseRepository
 {
-    private const SERVER_COLUMNS = 'id, name, description, ip_address, is_active, monitor_resources, cpu_total, ram_total, disk_total, check_interval_seconds, last_check_at, retention_days, cpu_alert_threshold, ram_alert_threshold, disk_alert_threshold, bandwidth_alert_threshold, alert_cpu_enabled, alert_ram_enabled, alert_disk_enabled, alert_bandwidth_enabled, created_by, created_at, updated_at';
+    private const SERVER_COLUMNS = 'id, name, description, ip_address, is_active, monitor_resources, cpu_total, ram_total, disk_total, check_interval_seconds, last_check_at, retention_days, cpu_alert_threshold, ram_alert_threshold, disk_alert_threshold, bandwidth_alert_threshold, alert_cpu_enabled, alert_ram_enabled, alert_disk_enabled, alert_bandwidth_enabled, created_by, created_at, updated_at, deleted_at';
 
     /**
      * @return list<Server>
@@ -69,7 +69,8 @@ final class MonitoringQueueRepository extends BaseRepository
             isset($row['alert_bandwidth_enabled']) ? (bool) $row['alert_bandwidth_enabled'] : true,
             isset($row['created_by']) ? (int) $row['created_by'] : null,
             $row['created_at'] ?? null,
-            $row['updated_at'] ?? null
+            $row['updated_at'] ?? null,
+            $row['deleted_at'] ?? null
         );
     }
 }

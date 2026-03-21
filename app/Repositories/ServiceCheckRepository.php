@@ -14,14 +14,14 @@ final class ServiceCheckRepository extends BaseRepository
 {
     public function findById(int $id): ?ServiceCheck
     {
-        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE id = ? AND deleted_at IS NULL', [$id]);
+        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at, deleted_at FROM service_checks WHERE id = ? AND deleted_at IS NULL', [$id]);
 
         return $row ? $this->mapRowToServiceCheck($row) : null;
     }
 
     public function findBySlug(string $slug): ?ServiceCheck
     {
-        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE slug = ? AND deleted_at IS NULL', [$slug]);
+        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at, deleted_at FROM service_checks WHERE slug = ? AND deleted_at IS NULL', [$slug]);
 
         return $row ? $this->mapRowToServiceCheck($row) : null;
     }
@@ -68,7 +68,7 @@ final class ServiceCheckRepository extends BaseRepository
      */
     public function list(): array
     {
-        $rows = $this->fetchAll('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE deleted_at IS NULL ORDER BY id');
+        $rows = $this->fetchAll('SELECT id, name, slug, description, created_at, updated_at, deleted_at FROM service_checks WHERE deleted_at IS NULL ORDER BY id');
 
         return array_map(fn (array $r) => $this->mapRowToServiceCheck($r), $rows);
     }
@@ -84,7 +84,8 @@ final class ServiceCheckRepository extends BaseRepository
             $row['slug'] ?? null,
             $row['description'] ?? null,
             $row['created_at'] ?? null,
-            $row['updated_at'] ?? null
+            $row['updated_at'] ?? null,
+            $row['deleted_at'] ?? null
         );
     }
 }

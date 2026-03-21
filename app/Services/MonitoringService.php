@@ -8,6 +8,8 @@ use App\Exceptions\HttpException;
 use App\Models\MonitoringLog;
 use App\Models\MonitoringLogServiceCheck;
 use App\Models\Server;
+use App\Monitoring\MockMetricGenerator;
+use App\Monitoring\MockServiceCheckGenerator;
 use App\Repositories\MonitoringLogRepository;
 use App\Repositories\MonitoringLogServiceCheckRepository;
 use App\Repositories\MonitoringQueueRepository;
@@ -15,16 +17,24 @@ use App\Repositories\ServerServiceCheckRepository;
 use PDOException;
 
 /**
- * Service responsible for mocked monitoring execution and persistence.
+ * Orchestrates simulated monitoring of a server.
+ * Uses mock generators for metrics and service checks, persists logs, and updates last_check_at.
  */
 final class MonitoringService
 {
+    private MockMetricGenerator $metricGenerator;
+    private MockServiceCheckGenerator $serviceCheckGenerator;
+
     public function __construct(
         private MonitoringLogRepository $monitoringLogRepository,
         private MonitoringLogServiceCheckRepository $monitoringLogServiceCheckRepository,
         private ServerServiceCheckRepository $serverServiceCheckRepository,
-        private MonitoringQueueRepository $monitoringQueueRepository
+        private MonitoringQueueRepository $monitoringQueueRepository,
+        ?MockMetricGenerator $metricGenerator = null,
+        ?MockServiceCheckGenerator $serviceCheckGenerator = null
     ) {
+        $this->metricGenerator = $metricGenerator ?? new MockMetricGenerator();
+        $this->serviceCheckGenerator = $serviceCheckGenerator ?? new MockServiceCheckGenerator();
     }
 
     /**
@@ -41,13 +51,29 @@ final class MonitoringService
         }
 
         $checkedAt = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
-        $metrics = $this->generateMockMetrics();
         $isUp = true;
-        $alertTypes = $this->resolveAlertTypes($server, $metrics);
-        $isAlert = $alertTypes !== [];
-        $alertType = $isAlert ? implode(',', $alertTypes) : null;
+
+        $cpuUsage = null;
+        $ramUsage = null;
+        $diskUsage = null;
+        $bandwidthUsage = null;
+        $isAlert = false;
+        $alertType = null;
+        $sentToEmail = null;
+
+        if ($server->getMonitorResources()) {
+            $metrics = $this->metricGenerator->generate();
+            $cpuUsage = $metrics['cpu_usage_percent'];
+            $ramUsage = $metrics['ram_usage_percent'];
+            $diskUsage = $metrics['disk_usage_percent'];
+            $bandwidthUsage = $metrics['bandwidth_usage_percent'];
+            $alertTypes = $this->resolveAlertTypes($server, $metrics);
+            $isAlert = $alertTypes !== [];
+            $alertType = $isAlert ? implode(',', $alertTypes) : null;
+            $sentToEmail = $isAlert ? 'alerts@infra.watch' : null;
+        }
+
         $errorMessage = $isUp ? null : 'Mocked availability failure';
-        $sentToEmail = $isAlert ? 'alerts@infra.watch' : null;
 
         try {
             $log = new MonitoringLog(
@@ -55,10 +81,10 @@ final class MonitoringService
                 $serverId,
                 $checkedAt,
                 $isUp,
-                $metrics['cpu_usage_percent'],
-                $metrics['ram_usage_percent'],
-                $metrics['disk_usage_percent'],
-                $metrics['bandwidth_usage_percent'],
+                $cpuUsage,
+                $ramUsage,
+                $diskUsage,
+                $bandwidthUsage,
                 $isAlert,
                 $alertType,
                 $errorMessage,
@@ -70,14 +96,13 @@ final class MonitoringService
 
             $serviceChecks = $this->serverServiceCheckRepository->listByServerId($serverId);
             foreach ($serviceChecks as $serviceCheck) {
-                $isRunning = random_int(0, 1) === 1;
-                $outputMessage = $isRunning ? 'Service is running' : 'Service is not running';
+                $mock = $this->serviceCheckGenerator->generate();
                 $result = new MonitoringLogServiceCheck(
                     null,
                     $logId,
                     $serviceCheck->getId(),
-                    $isRunning,
-                    $outputMessage
+                    $mock['is_running'],
+                    $mock['output_message']
                 );
                 $this->monitoringLogServiceCheckRepository->create($result);
             }
@@ -88,24 +113,6 @@ final class MonitoringService
         } catch (PDOException $e) {
             throw new HttpException('Failed to persist monitoring data', 500, $e);
         }
-    }
-
-    /**
-     * @return array{cpu_usage_percent: float, ram_usage_percent: float, disk_usage_percent: float, bandwidth_usage_percent: float}
-     */
-    private function generateMockMetrics(): array
-    {
-        return [
-            'cpu_usage_percent' => $this->randomMetric(),
-            'ram_usage_percent' => $this->randomMetric(),
-            'disk_usage_percent' => $this->randomMetric(),
-            'bandwidth_usage_percent' => $this->randomMetric(),
-        ];
-    }
-
-    private function randomMetric(): float
-    {
-        return random_int(0, 5000) / 100;
     }
 
     /**

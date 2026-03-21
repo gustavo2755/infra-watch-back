@@ -57,6 +57,16 @@ final class MonitoringQueueRepositoryTest extends DatabaseTestCase
         $this->assertNotContains($recentId, $ids);
     }
 
+    public function testListEligibleServersIncludesServerWithMonitorResourcesFalse(): void
+    {
+        $serverId = $this->createServer('srv-no-res', '10.0.0.15', 1, null, null, 0);
+
+        $eligible = $this->repository->listEligibleServers(30);
+        $ids = array_map(fn ($server) => $server->getId(), $eligible);
+
+        $this->assertContains($serverId, $ids);
+    }
+
     public function testTouchLastCheckAtUpdatesTimestamp(): void
     {
         $serverId = $this->createServer('srv-touch', '10.0.0.14', 1, null, null);
@@ -71,12 +81,12 @@ final class MonitoringQueueRepositoryTest extends DatabaseTestCase
         $this->assertNotNull($after);
     }
 
-    private function createServer(string $name, string $ipAddress, int $isActive, ?string $lastCheckAtExpression, ?string $deletedAtExpression): int
+    private function createServer(string $name, string $ipAddress, int $isActive, ?string $lastCheckAtExpression, ?string $deletedAtExpression, int $monitorResources = 1): int
     {
         $lastCheckAt = $lastCheckAtExpression === null ? 'NULL' : $lastCheckAtExpression;
         $deletedAt = $deletedAtExpression === null ? 'NULL' : $deletedAtExpression;
         $this->pdo->exec(
-            "INSERT INTO servers (name, ip_address, is_active, last_check_at, created_at, updated_at, deleted_at) VALUES ('$name', '$ipAddress', $isActive, $lastCheckAt, datetime('now'), datetime('now'), $deletedAt)"
+            "INSERT INTO servers (name, ip_address, is_active, monitor_resources, last_check_at, created_at, updated_at, deleted_at) VALUES ('$name', '$ipAddress', $isActive, $monitorResources, $lastCheckAt, datetime('now'), datetime('now'), $deletedAt)"
         );
 
         return (int) $this->pdo->lastInsertId();
