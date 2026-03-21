@@ -81,6 +81,24 @@ final class ServerControllerTest extends HttpTestCase
 
         $this->assertSame(200, $result['statusCode']);
         $this->assertSame($serverId, $result['body']['data']['id'] ?? 0);
+        $this->assertArrayHasKey('service_checks', $result['body']['data']);
+        $this->assertIsArray($result['body']['data']['service_checks']);
+    }
+
+    public function testServerIncludesLinkedServiceChecks(): void
+    {
+        $create = $this->request('POST', '/api/servers', $this->validServerPayload(), [], $this->getAuthHeaders());
+        $serverId = $create['body']['data']['id'] ?? 0;
+
+        $this->request('POST', '/api/servers/' . $serverId . '/service-checks/1', [], [], $this->getAuthHeaders());
+
+        $result = $this->request('GET', '/api/servers/' . $serverId, [], [], $this->getAuthHeaders());
+
+        $this->assertSame(200, $result['statusCode']);
+        $serviceChecks = $result['body']['data']['service_checks'] ?? [];
+        $this->assertGreaterThanOrEqual(1, count($serviceChecks));
+        $slugs = array_column($serviceChecks, 'slug');
+        $this->assertContains('nginx', $slugs);
     }
 
     public function testFindByIdNonexistent(): void
@@ -130,11 +148,33 @@ final class ServerControllerTest extends HttpTestCase
         $this->assertArrayHasKey('errors', $result['body']);
     }
 
-    public function testMethodNotAllowed(): void
+    public function testDeleteSuccess(): void
     {
-        $result = $this->request('DELETE', '/api/servers/1', [], [], $this->getAuthHeaders());
+        $create = $this->request('POST', '/api/servers', $this->validServerPayload(), [], $this->getAuthHeaders());
+        $serverId = $create['body']['data']['id'] ?? 0;
+
+        $result = $this->request('DELETE', '/api/servers/' . $serverId, [], [], $this->getAuthHeaders());
+
+        $this->assertSame(200, $result['statusCode']);
+        $this->assertTrue($result['body']['success'] ?? false);
+        $this->assertSame('Server deleted', $result['body']['message'] ?? '');
+        $this->assertArrayHasKey('data', $result['body']);
+        $this->assertNull($result['body']['data']);
+
+        $list = $this->request('GET', '/api/servers', [], [], $this->getAuthHeaders());
+        $ids = array_column($list['body']['data']['data'] ?? [], 'id');
+        $this->assertNotContains($serverId, $ids);
+
+        $get = $this->request('GET', '/api/servers/' . $serverId, [], [], $this->getAuthHeaders());
+        $this->assertSame(404, $get['statusCode']);
+    }
+
+    public function testDeleteNonexistentServerReturns404(): void
+    {
+        $result = $this->request('DELETE', '/api/servers/99999', [], [], $this->getAuthHeaders());
 
         $this->assertSame(404, $result['statusCode']);
+        $this->assertSame('Server not found', $result['body']['message'] ?? '');
     }
 
     public function testStandardizedResponse(): void

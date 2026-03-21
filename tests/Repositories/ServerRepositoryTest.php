@@ -108,4 +108,33 @@ final class ServerRepositoryTest extends DatabaseTestCase
 
         $this->repository->create($server);
     }
+
+    public function testDeleteSoftDeletesRecord(): void
+    {
+        $server = new Server(null, 'ToSoftDelete', null, '1.1.1.1');
+        $id = $this->repository->create($server);
+
+        $this->repository->delete($id);
+
+        $this->assertNull($this->repository->findById($id));
+
+        $row = $this->pdo->query("SELECT id, deleted_at FROM servers WHERE id = $id")->fetch(\PDO::FETCH_ASSOC);
+        $this->assertNotFalse($row);
+        $this->assertNotNull($row['deleted_at']);
+    }
+
+    public function testListExcludesSoftDeleted(): void
+    {
+        $s1 = new Server(null, 'Keep', null, '1.1.1.1');
+        $s2 = new Server(null, 'DeleteMe', null, '2.2.2.2');
+        $id1 = $this->repository->create($s1);
+        $id2 = $this->repository->create($s2);
+
+        $this->repository->delete($id2);
+
+        $list = $this->repository->list();
+        $ids = array_map(fn (Server $s) => $s->getId(), $list);
+        $this->assertContains($id1, $ids);
+        $this->assertNotContains($id2, $ids);
+    }
 }

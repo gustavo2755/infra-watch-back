@@ -115,10 +115,53 @@ final class ServiceCheckService implements ServiceCheckServiceInterface
         }
 
         if ($this->serverServiceCheckRepository->exists($serverId, $serviceCheckId)) {
-            return;
+            throw new HttpException('Service check is already linked to this server', 409);
         }
 
         $this->serverServiceCheckRepository->attach($serverId, $serviceCheckId);
+    }
+
+    /**
+     * Unlinks a service check from a server.
+     *
+     * @throws HttpException 404 when server, service check or link not found
+     */
+    public function detachFromServer(int $serverId, int $serviceCheckId): void
+    {
+        $server = $this->serverRepository->findById($serverId);
+
+        if ($server === null) {
+            throw new HttpException('Server not found', 404);
+        }
+
+        $serviceCheck = $this->serviceCheckRepository->findById($serviceCheckId);
+
+        if ($serviceCheck === null) {
+            throw new HttpException('Service check not found', 404);
+        }
+
+        if (!$this->serverServiceCheckRepository->exists($serverId, $serviceCheckId)) {
+            throw new HttpException('Link not found', 404);
+        }
+
+        $this->serverServiceCheckRepository->detach($serverId, $serviceCheckId);
+    }
+
+    /**
+     * Deletes a service check and its links.
+     *
+     * @throws HttpException 404 when service check not found
+     */
+    public function delete(int $id): void
+    {
+        $serviceCheck = $this->serviceCheckRepository->findById($id);
+
+        if ($serviceCheck === null) {
+            throw new HttpException('Service check not found', 404);
+        }
+
+        $this->serverServiceCheckRepository->deleteByServiceCheckId($id);
+        $this->serviceCheckRepository->delete($id);
     }
 
     /**
@@ -133,6 +176,21 @@ final class ServiceCheckService implements ServiceCheckServiceInterface
         }
 
         return $this->serverServiceCheckRepository->listByServerId($serverId);
+    }
+
+    /**
+     * @return list<ServiceCheck>
+     * @throws HttpException 404 when server not found
+     */
+    public function listAvailableByServerId(int $serverId): array
+    {
+        $server = $this->serverRepository->findById($serverId);
+
+        if ($server === null) {
+            throw new HttpException('Server not found', 404);
+        }
+
+        return $this->serverServiceCheckRepository->listUnlinkedByServerId($serverId);
     }
 
     /**

@@ -98,27 +98,38 @@ final class OpenApiSpec
                     'created_by' => ['type' => 'integer', 'nullable' => true],
                     'created_at' => ['type' => 'string', 'nullable' => true],
                     'updated_at' => ['type' => 'string', 'nullable' => true],
+                    'service_checks' => [
+                        'type' => 'array',
+                        'items' => ['$ref' => '#/components/schemas/ServiceCheck'],
+                        'description' => 'Service checks linked to this server (included in GET server/list)',
+                    ],
                 ],
             ],
             'ServerCreate' => [
                 'type' => 'object',
-                'required' => ['name', 'ip_address'],
+                'required' => [
+                    'name', 'ip_address', 'is_active', 'monitor_resources',
+                    'cpu_total', 'ram_total', 'disk_total', 'check_interval_seconds',
+                    'retention_days', 'cpu_alert_threshold', 'ram_alert_threshold',
+                    'disk_alert_threshold', 'bandwidth_alert_threshold',
+                    'alert_cpu_enabled', 'alert_ram_enabled', 'alert_disk_enabled', 'alert_bandwidth_enabled',
+                ],
                 'properties' => [
                     'name' => ['type' => 'string'],
                     'description' => ['type' => 'string', 'nullable' => true],
                     'ip_address' => ['type' => 'string', 'format' => 'ipv4'],
                     'is_active' => ['type' => 'boolean'],
                     'monitor_resources' => ['type' => 'boolean'],
-                    'cpu_total' => ['type' => 'number', 'nullable' => true],
-                    'ram_total' => ['type' => 'number', 'nullable' => true],
-                    'disk_total' => ['type' => 'number', 'nullable' => true],
-                    'check_interval_seconds' => ['type' => 'integer', 'nullable' => true],
+                    'cpu_total' => ['type' => 'number'],
+                    'ram_total' => ['type' => 'number'],
+                    'disk_total' => ['type' => 'number'],
+                    'check_interval_seconds' => ['type' => 'integer'],
                     'last_check_at' => ['type' => 'string', 'nullable' => true],
-                    'retention_days' => ['type' => 'integer', 'nullable' => true],
-                    'cpu_alert_threshold' => ['type' => 'integer', 'nullable' => true],
-                    'ram_alert_threshold' => ['type' => 'integer', 'nullable' => true],
-                    'disk_alert_threshold' => ['type' => 'integer', 'nullable' => true],
-                    'bandwidth_alert_threshold' => ['type' => 'integer', 'nullable' => true],
+                    'retention_days' => ['type' => 'integer'],
+                    'cpu_alert_threshold' => ['type' => 'integer'],
+                    'ram_alert_threshold' => ['type' => 'integer'],
+                    'disk_alert_threshold' => ['type' => 'integer'],
+                    'bandwidth_alert_threshold' => ['type' => 'integer'],
                     'alert_cpu_enabled' => ['type' => 'boolean'],
                     'alert_ram_enabled' => ['type' => 'boolean'],
                     'alert_disk_enabled' => ['type' => 'boolean'],
@@ -376,6 +387,31 @@ final class OpenApiSpec
                         '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
                     ],
                 ],
+                'delete' => [
+                    'summary' => 'Delete server',
+                    'description' => 'Soft delete: marks the server as deleted (sets deleted_at). The record remains in the database; GET endpoints will not return it.',
+                    'parameters' => [['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Server deleted',
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => [
+                                        'type' => 'object',
+                                        'properties' => [
+                                            'success' => ['type' => 'boolean', 'example' => true],
+                                            'message' => ['type' => 'string', 'example' => 'Server deleted'],
+                                            'data' => ['type' => 'object', 'nullable' => true],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        '401' => ['description' => 'Unauthorized', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '404' => ['description' => 'Server not found', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                    ],
+                ],
             ],
             '/api/service-checks' => [
                 'post' => [
@@ -482,6 +518,31 @@ final class OpenApiSpec
                         '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
                     ],
                 ],
+                'delete' => [
+                    'summary' => 'Delete service check',
+                    'description' => 'Soft delete: marks the service check as deleted (sets deleted_at). The record remains in the database; GET endpoints will not return it.',
+                    'parameters' => [['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Service check deleted',
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => [
+                                        'type' => 'object',
+                                        'properties' => [
+                                            'success' => ['type' => 'boolean', 'example' => true],
+                                            'message' => ['type' => 'string', 'example' => 'Service check deleted'],
+                                            'data' => ['type' => 'object', 'nullable' => true],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        '401' => ['description' => 'Unauthorized', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '404' => ['description' => 'Service check not found', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                    ],
+                ],
             ],
             '/api/service-checks/slug/{slug}' => [
                 'get' => [
@@ -509,6 +570,38 @@ final class OpenApiSpec
                     ],
                 ],
             ],
+            '/api/servers/{serverId}/service-checks/available' => [
+                'get' => [
+                    'summary' => 'List service checks available to link (not yet linked to server)',
+                    'parameters' => [['name' => 'serverId', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']]],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Available service checks',
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => [
+                                        'type' => 'object',
+                                        'properties' => [
+                                            'success' => ['type' => 'boolean'],
+                                            'message' => ['type' => 'string'],
+                                            'data' => [
+                                                'type' => 'object',
+                                                'properties' => [
+                                                    'data' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/ServiceCheck']],
+                                                    'count' => ['type' => 'integer'],
+                                                ],
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        '401' => ['description' => 'Unauthorized', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '404' => ['description' => 'Server not found', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                    ],
+                ],
+            ],
             '/api/servers/{serverId}/service-checks/{serviceCheckId}' => [
                 'post' => [
                     'summary' => 'Attach service check to server',
@@ -523,6 +616,35 @@ final class OpenApiSpec
                         ],
                         '401' => ['description' => 'Unauthorized', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
                         '404' => ['description' => 'Server or service check not found', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '409' => ['description' => 'Service check is already linked to this server', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                    ],
+                ],
+                'delete' => [
+                    'summary' => 'Detach service check from server',
+                    'description' => 'Soft delete: marks the link as deleted. The service check becomes available to link again (list available).',
+                    'parameters' => [
+                        ['name' => 'serverId', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
+                        ['name' => 'serviceCheckId', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Service check unlinked successfully',
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => [
+                                        'type' => 'object',
+                                        'properties' => [
+                                            'success' => ['type' => 'boolean', 'example' => true],
+                                            'message' => ['type' => 'string', 'example' => 'Service check unlinked successfully'],
+                                            'data' => ['type' => 'object', 'nullable' => true],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        '401' => ['description' => 'Unauthorized', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '404' => ['description' => 'Server, service check or link not found', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
                         '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
                     ],
                 ],

@@ -20,6 +20,8 @@ interface ServerServiceInterface
 
     public function findById(int $id): Server;
 
+    public function delete(int $id): void;
+
     /**
      * @return list<Server>
      */

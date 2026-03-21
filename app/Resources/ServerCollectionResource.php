@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Resources;
 
+use App\Contracts\ServiceCheckServiceInterface;
 use App\Models\Server;
 
 /**
@@ -15,7 +16,8 @@ final class ServerCollectionResource extends BaseResource
      * @param list<Server> $servers
      */
     public function __construct(
-        private readonly array $servers
+        private readonly array $servers,
+        private readonly ?ServiceCheckServiceInterface $serviceCheckService = null
     ) {
     }
 
@@ -24,7 +26,14 @@ final class ServerCollectionResource extends BaseResource
      */
     public function toArray(): array
     {
-        $data = array_map(fn (Server $s) => ServerResource::make($s), $this->servers);
+        $data = array_map(function (Server $s): array {
+            $serviceChecks = [];
+            if ($this->serviceCheckService !== null && $s->getId() !== null) {
+                $serviceChecks = $this->serviceCheckService->listByServerId((int) $s->getId());
+            }
+
+            return ServerResource::make($s, $serviceChecks);
+        }, $this->servers);
 
         return [
             'data' => $data,
@@ -36,8 +45,8 @@ final class ServerCollectionResource extends BaseResource
      * @param list<Server> $servers
      * @return array<string, mixed>
      */
-    public static function make(array $servers): array
+    public static function make(array $servers, ?ServiceCheckServiceInterface $serviceCheckService = null): array
     {
-        return (new self($servers))->toArray();
+        return (new self($servers, $serviceCheckService))->toArray();
     }
 }

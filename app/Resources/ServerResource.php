@@ -5,14 +5,19 @@ declare(strict_types=1);
 namespace App\Resources;
 
 use App\Models\Server;
+use App\Models\ServiceCheck;
 
 /**
  * Transforms a single Server model into API output.
  */
 final class ServerResource extends BaseResource
 {
+    /**
+     * @param list<ServiceCheck> $serviceChecks
+     */
     public function __construct(
-        private readonly Server $server
+        private readonly Server $server,
+        private readonly array $serviceChecks = []
     ) {
     }
 
@@ -21,7 +26,7 @@ final class ServerResource extends BaseResource
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'id' => $this->server->getId(),
             'name' => $this->server->getName(),
             'description' => $this->server->getDescription(),
@@ -46,13 +51,18 @@ final class ServerResource extends BaseResource
             'created_at' => $this->server->getCreatedAt(),
             'updated_at' => $this->server->getUpdatedAt(),
         ];
+
+        $data['service_checks'] = array_map(fn (ServiceCheck $sc) => ServiceCheckResource::make($sc), $this->serviceChecks);
+
+        return $data;
     }
 
     /**
+     * @param list<ServiceCheck> $serviceChecks
      * @return array<string, mixed>
      */
-    public static function make(Server $server): array
+    public static function make(Server $server, array $serviceChecks = []): array
     {
-        return (new self($server))->toArray();
+        return (new self($server, $serviceChecks))->toArray();
     }
 }

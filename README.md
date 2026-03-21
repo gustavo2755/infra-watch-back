@@ -1,55 +1,62 @@
 # Infra Watch
 
-Base inicial do projeto com PHP 8.3, MySQL 8, Docker, Composer e ponto de entrada em `public`.
+Initial project base with PHP 8.3, MySQL 8, Docker, Composer and entry point in `public`.
 
-## Requisitos
+## Requirements
 
 - Docker
 - Docker Compose
 
-## Subir ambiente
+## Start environment
 
 ```bash
 docker compose up --build -d
 ```
 
-## Acessar aplicação
+## Access application
 
 - URL: `http://localhost:8000`
 
-## Migrations e seeds
+## Migrations and seeds
 
-Executar dentro do container:
+Run inside the container:
 
 ```bash
 docker compose exec app php database/migrate.php
 docker compose exec app php database/seed.php
 ```
 
-### Credenciais para teste
+To wipe the database and run migrations from scratch:
 
-| Campo    | Valor                |
+```bash
+docker compose exec app php database/migrate.php fresh
+docker compose exec app php database/seed.php
+```
+
+### Test credentials
+
+| Field    | Value                |
 |----------|----------------------|
 | **Email** | `admin@infra.watch`   |
-| **Senha** | `password123`         |
+| **Password** | `password123`         |
 
-Para sobrescrever: definir no `.env` as variáveis `SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD`.
+To override: set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `.env`.
 
 ### Service checks (seeder)
 
-São criados automaticamente: Nginx (nginx), MySQL (mysql), Apache (apache2), PHP-FPM (php-fpm). Não há seeder para servers — criar via `POST /api/servers`.
+Created automatically: Nginx (nginx), MySQL (mysql), Apache (apache2), PHP-FPM (php-fpm). No seeder for servers — create via `POST /api/servers`.
 
-## Testes
+## Tests
 
-Os testes usam **SQLite** em memória, isolados do banco MySQL principal. O container inclui `pdo_sqlite` (imagem base PHP). Rodar sempre **dentro do container**:
+Tests use **SQLite** in memory, isolated from the main MySQL database. The container includes `pdo_sqlite` (PHP base image). Always run **inside the container**:
 
 ```bash
 docker compose exec app ./vendor/bin/phpunit
 ```
 
-O banco de testes é recriado do zero a cada execução da suíte. Não é necessário PHP, SQLite ou dependências instalados na máquina host.
+The test database is recreated from scratch on each test run. PHP, SQLite or other dependencies are not required on the host machine.
 
-## Derrubar ambiente
+## Stop environment
 
 ```bash
 docker compose down

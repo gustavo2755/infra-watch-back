@@ -78,4 +78,33 @@ final class ServiceCheckRepositoryTest extends DatabaseTestCase
         $this->assertIsArray($list);
         $this->assertGreaterThanOrEqual(4, count($list));
     }
+
+    public function testDeleteSoftDeletesRecord(): void
+    {
+        $sc = new ServiceCheck(null, 'ToSoftDelete', 'to-soft-delete', null);
+        $id = $this->repository->create($sc);
+
+        $this->repository->delete($id);
+
+        $this->assertNull($this->repository->findById($id));
+
+        $row = $this->pdo->query("SELECT id, deleted_at FROM service_checks WHERE id = $id")->fetch(\PDO::FETCH_ASSOC);
+        $this->assertNotFalse($row);
+        $this->assertNotNull($row['deleted_at']);
+    }
+
+    public function testListExcludesSoftDeleted(): void
+    {
+        $sc1 = new ServiceCheck(null, 'Keep', 'keep-sc', null);
+        $sc2 = new ServiceCheck(null, 'DeleteMe', 'delete-me-sc', null);
+        $id1 = $this->repository->create($sc1);
+        $id2 = $this->repository->create($sc2);
+
+        $this->repository->delete($id2);
+
+        $list = $this->repository->list();
+        $ids = array_map(fn (ServiceCheck $s) => $s->getId(), $list);
+        $this->assertContains($id1, $ids);
+        $this->assertNotContains($id2, $ids);
+    }
 }

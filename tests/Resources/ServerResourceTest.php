@@ -77,12 +77,14 @@ final class ServerResourceTest extends TestCase
             'retention_days', 'cpu_alert_threshold', 'ram_alert_threshold', 'disk_alert_threshold',
             'bandwidth_alert_threshold', 'alert_cpu_enabled', 'alert_ram_enabled',
             'alert_disk_enabled', 'alert_bandwidth_enabled', 'created_by', 'created_at', 'updated_at',
+            'service_checks',
         ];
 
         foreach ($expectedKeys as $key) {
             $this->assertArrayHasKey($key, $result);
         }
 
+        $this->assertIsArray($result['service_checks']);
         $this->assertCount(count($expectedKeys), $result);
     }
 

@@ -14,14 +14,14 @@ final class ServiceCheckRepository extends BaseRepository
 {
     public function findById(int $id): ?ServiceCheck
     {
-        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE id = ?', [$id]);
+        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE id = ? AND deleted_at IS NULL', [$id]);
 
         return $row ? $this->mapRowToServiceCheck($row) : null;
     }
 
     public function findBySlug(string $slug): ?ServiceCheck
     {
-        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE slug = ?', [$slug]);
+        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE slug = ? AND deleted_at IS NULL', [$slug]);
 
         return $row ? $this->mapRowToServiceCheck($row) : null;
     }
@@ -55,11 +55,20 @@ final class ServiceCheckRepository extends BaseRepository
     }
 
     /**
+     * @throws PDOException
+     */
+    public function delete(int $id): void
+    {
+        $now = $this->now();
+        $this->execute("UPDATE service_checks SET deleted_at = $now WHERE id = ?", [$id]);
+    }
+
+    /**
      * @return list<ServiceCheck>
      */
     public function list(): array
     {
-        $rows = $this->fetchAll('SELECT id, name, slug, description, created_at, updated_at FROM service_checks ORDER BY id');
+        $rows = $this->fetchAll('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE deleted_at IS NULL ORDER BY id');
 
         return array_map(fn (array $r) => $this->mapRowToServiceCheck($r), $rows);
     }

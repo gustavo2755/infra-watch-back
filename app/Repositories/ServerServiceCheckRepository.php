@@ -32,18 +32,63 @@ final class ServerServiceCheckRepository extends BaseRepository
     {
         $sql = 'SELECT sc.id, sc.name, sc.slug, sc.description, sc.created_at, sc.updated_at
                 FROM service_checks sc
-                INNER JOIN server_service_checks ssc ON ssc.service_check_id = sc.id
-                WHERE ssc.server_id = ?
+                INNER JOIN server_service_checks ssc ON ssc.service_check_id = sc.id AND ssc.deleted_at IS NULL
+                WHERE ssc.server_id = ? AND sc.deleted_at IS NULL
                 ORDER BY sc.id';
         $rows = $this->fetchAll($sql, [$serverId]);
 
         return array_map(fn (array $r) => $this->mapRowToServiceCheck($r), $rows);
     }
 
+    /**
+     * @return list<ServiceCheck>
+     */
+    public function listUnlinkedByServerId(int $serverId): array
+    {
+        $sql = 'SELECT sc.id, sc.name, sc.slug, sc.description, sc.created_at, sc.updated_at
+                FROM service_checks sc
+                LEFT JOIN server_service_checks ssc ON ssc.service_check_id = sc.id AND ssc.server_id = ? AND ssc.deleted_at IS NULL
+                WHERE ssc.server_id IS NULL AND sc.deleted_at IS NULL
+                ORDER BY sc.id';
+        $rows = $this->fetchAll($sql, [$serverId]);
+
+        return array_map(fn (array $r) => $this->mapRowToServiceCheck($r), $rows);
+    }
+
+    /**
+     * @throws PDOException
+     */
+    public function detach(int $serverId, int $serviceCheckId): void
+    {
+        $now = $this->now();
+        $this->execute(
+            "UPDATE server_service_checks SET deleted_at = $now WHERE server_id = ? AND service_check_id = ?",
+            [$serverId, $serviceCheckId]
+        );
+    }
+
+    /**
+     * @throws PDOException
+     */
+    public function deleteByServerId(int $serverId): void
+    {
+        $now = $this->now();
+        $this->execute("UPDATE server_service_checks SET deleted_at = $now WHERE server_id = ?", [$serverId]);
+    }
+
+    /**
+     * @throws PDOException
+     */
+    public function deleteByServiceCheckId(int $serviceCheckId): void
+    {
+        $now = $this->now();
+        $this->execute("UPDATE server_service_checks SET deleted_at = $now WHERE service_check_id = ?", [$serviceCheckId]);
+    }
+
     public function exists(int $serverId, int $serviceCheckId): bool
     {
         $row = $this->fetchOne(
-            'SELECT 1 FROM server_service_checks WHERE server_id = ? AND service_check_id = ?',
+            'SELECT 1 FROM server_service_checks WHERE server_id = ? AND service_check_id = ? AND deleted_at IS NULL',
             [$serverId, $serviceCheckId]
         );
 

@@ -39,7 +39,7 @@ final class MigrationsTest extends DatabaseTestCase
             'cpu_total', 'ram_total', 'disk_total', 'check_interval_seconds', 'last_check_at',
             'retention_days', 'cpu_alert_threshold', 'ram_alert_threshold', 'disk_alert_threshold',
             'bandwidth_alert_threshold', 'alert_cpu_enabled', 'alert_ram_enabled', 'alert_disk_enabled',
-            'alert_bandwidth_enabled', 'created_by', 'created_at', 'updated_at'
+            'alert_bandwidth_enabled', 'created_by', 'created_at', 'updated_at', 'deleted_at'
         ];
 
         foreach ($expected as $col) {
@@ -69,7 +69,7 @@ final class MigrationsTest extends DatabaseTestCase
     {
         $cols = $this->getColumns('service_checks');
 
-        $expected = ['id', 'name', 'slug', 'description', 'created_at', 'updated_at'];
+        $expected = ['id', 'name', 'slug', 'description', 'created_at', 'updated_at', 'deleted_at'];
 
         foreach ($expected as $col) {
             $this->assertContains($col, $cols, "service_checks should have column $col");
@@ -91,6 +91,7 @@ final class MigrationsTest extends DatabaseTestCase
 
         $this->assertContains('created_at', $cols);
         $this->assertContains('updated_at', $cols);
+        $this->assertContains('deleted_at', $cols);
     }
 
     public function testSeedServiceChecksWithSlugs(): void

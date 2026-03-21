@@ -54,7 +54,6 @@ final class Migrator
             $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
             $result = $this->pdo->query('SHOW TABLES');
             $tables = $result ? $result->fetchAll(PDO::FETCH_COLUMN) : [];
-            $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
         }
 
         foreach ($tables as $table) {
@@ -62,6 +61,10 @@ final class Migrator
         }
 
         $this->pdo->exec('DROP TABLE IF EXISTS migrations');
+
+        if ($driver !== 'sqlite') {
+            $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        }
     }
 
     private function createMigrationsTable(): void

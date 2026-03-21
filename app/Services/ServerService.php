@@ -8,6 +8,7 @@ use App\Contracts\ServerServiceInterface;
 use App\Exceptions\HttpException;
 use App\Models\Server;
 use App\Repositories\ServerRepository;
+use App\Repositories\ServerServiceCheckRepository;
 use App\Repositories\UserRepository;
 
 /**
@@ -17,7 +18,8 @@ final class ServerService implements ServerServiceInterface
 {
     public function __construct(
         private ServerRepository $serverRepository,
-        private UserRepository $userRepository
+        private UserRepository $userRepository,
+        private ServerServiceCheckRepository $serverServiceCheckRepository
     ) {
     }
 
@@ -106,6 +108,23 @@ final class ServerService implements ServerServiceInterface
     public function filterByIsActive(bool $isActive): array
     {
         return $this->serverRepository->filterByIsActive($isActive);
+    }
+
+    /**
+     * Deletes a server and its links.
+     *
+     * @throws HttpException 404 when server not found
+     */
+    public function delete(int $id): void
+    {
+        $server = $this->serverRepository->findById($id);
+
+        if ($server === null) {
+            throw new HttpException('Server not found', 404);
+        }
+
+        $this->serverServiceCheckRepository->deleteByServerId($id);
+        $this->serverRepository->delete($id);
     }
 
     /**

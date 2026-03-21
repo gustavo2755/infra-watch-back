@@ -26,6 +26,13 @@ if ($driver === 'sqlite') {
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 $migrator = new Database\Migrator($pdo, __DIR__ . '/migrations');
+
+$fresh = ($argv[1] ?? '') === 'fresh';
+if ($fresh) {
+    $migrator->fresh();
+    echo "Database dropped.\n";
+}
+
 $migrator->run();
 
 echo "Migrations completed.\n";

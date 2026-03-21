@@ -21,6 +21,7 @@ return function (App\Container $container): array {
     );
     $serverController = new ServerController(
         $container->getServerService(),
+        $container->getServiceCheckService(),
         new App\Requests\StoreServerRequest(),
         new App\Requests\UpdateServerRequest()
     );
@@ -41,13 +42,17 @@ return function (App\Container $container): array {
         ['method' => 'POST', 'path' => '/api/servers', 'handler' => $serverController->create(...), 'middleware' => $auth],
         ['method' => 'PUT', 'path' => '/api/servers/{id}', 'handler' => $serverController->update(...), 'middleware' => $auth],
         ['method' => 'GET', 'path' => '/api/servers/{id}', 'handler' => $serverController->show(...), 'middleware' => $auth],
+        ['method' => 'DELETE', 'path' => '/api/servers/{id}', 'handler' => $serverController->destroy(...), 'middleware' => $auth],
         ['method' => 'GET', 'path' => '/api/servers', 'handler' => $serverController->list(...), 'middleware' => $auth],
 
         ['method' => 'POST', 'path' => '/api/service-checks', 'handler' => $serviceCheckController->create(...), 'middleware' => $auth],
         ['method' => 'PUT', 'path' => '/api/service-checks/{id}', 'handler' => $serviceCheckController->update(...), 'middleware' => $auth],
+        ['method' => 'DELETE', 'path' => '/api/service-checks/{id}', 'handler' => $serviceCheckController->destroy(...), 'middleware' => $auth],
         ['method' => 'GET', 'path' => '/api/service-checks/{id}', 'handler' => $serviceCheckController->show(...), 'middleware' => $auth],
         ['method' => 'GET', 'path' => '/api/service-checks/slug/{slug}', 'handler' => $serviceCheckController->showBySlug(...), 'middleware' => $auth],
         ['method' => 'GET', 'path' => '/api/service-checks', 'handler' => $serviceCheckController->list(...), 'middleware' => $auth],
+        ['method' => 'GET', 'path' => '/api/servers/{serverId}/service-checks/available', 'handler' => $serviceCheckController->listAvailableByServer(...), 'middleware' => $auth],
         ['method' => 'POST', 'path' => '/api/servers/{serverId}/service-checks/{serviceCheckId}', 'handler' => $serviceCheckController->attachToServer(...), 'middleware' => $auth],
+        ['method' => 'DELETE', 'path' => '/api/servers/{serverId}/service-checks/{serviceCheckId}', 'handler' => $serviceCheckController->detachFromServer(...), 'middleware' => $auth],
     ];
 };

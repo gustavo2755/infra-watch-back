@@ -181,7 +181,7 @@ final class ServiceCheckControllerTest extends HttpTestCase
         $this->assertSame('Original', $result['body']['data']['description'] ?? '');
     }
 
-    public function testAttachToServerAlreadyLinked(): void
+    public function testAttachToServerAlreadyLinkedReturns409(): void
     {
         $serverPayload = [
             'name' => 'Idempotent Server',
@@ -211,7 +211,190 @@ final class ServiceCheckControllerTest extends HttpTestCase
         $second = $this->request('POST', '/api/servers/' . $serverId . '/service-checks/' . $serviceCheckId, [], [], $this->getAuthHeaders());
 
         $this->assertSame(200, $first['statusCode']);
-        $this->assertSame(200, $second['statusCode']);
+        $this->assertSame(409, $second['statusCode']);
+        $this->assertSame('Service check is already linked to this server', $second['body']['message'] ?? '');
+    }
+
+    public function testDetachFromServerSuccess(): void
+    {
+        $serverPayload = [
+            'name' => 'Detach Server',
+            'description' => null,
+            'ip_address' => '192.168.1.50',
+            'is_active' => true,
+            'monitor_resources' => true,
+            'cpu_total' => 4,
+            'ram_total' => 8,
+            'disk_total' => 100,
+            'check_interval_seconds' => 60,
+            'retention_days' => 30,
+            'cpu_alert_threshold' => 90,
+            'ram_alert_threshold' => 90,
+            'disk_alert_threshold' => 90,
+            'bandwidth_alert_threshold' => 100,
+            'alert_cpu_enabled' => true,
+            'alert_ram_enabled' => true,
+            'alert_disk_enabled' => true,
+            'alert_bandwidth_enabled' => true,
+        ];
+        $serverRes = $this->request('POST', '/api/servers', $serverPayload, [], $this->getAuthHeaders());
+        $serverId = $serverRes['body']['data']['id'] ?? 0;
+        $serviceCheckId = 1;
+
+        $this->request('POST', '/api/servers/' . $serverId . '/service-checks/' . $serviceCheckId, [], [], $this->getAuthHeaders());
+
+        $result = $this->request('DELETE', '/api/servers/' . $serverId . '/service-checks/' . $serviceCheckId, [], [], $this->getAuthHeaders());
+
+        $this->assertSame(200, $result['statusCode']);
+        $this->assertTrue($result['body']['success'] ?? false);
+        $this->assertSame('Service check unlinked successfully', $result['body']['message'] ?? '');
+        $this->assertArrayHasKey('data', $result['body']);
+        $this->assertNull($result['body']['data']);
+
+        $server = $this->request('GET', '/api/servers/' . $serverId, [], [], $this->getAuthHeaders());
+        $slugs = array_column($server['body']['data']['service_checks'] ?? [], 'slug');
+        $this->assertNotContains('nginx', $slugs);
+    }
+
+    public function testDetachFromServerReturns404WhenLinkNotFound(): void
+    {
+        $serverPayload = [
+            'name' => 'No Link Server',
+            'description' => null,
+            'ip_address' => '192.168.1.60',
+            'is_active' => true,
+            'monitor_resources' => true,
+            'cpu_total' => 4,
+            'ram_total' => 8,
+            'disk_total' => 100,
+            'check_interval_seconds' => 60,
+            'retention_days' => 30,
+            'cpu_alert_threshold' => 90,
+            'ram_alert_threshold' => 90,
+            'disk_alert_threshold' => 90,
+            'bandwidth_alert_threshold' => 100,
+            'alert_cpu_enabled' => true,
+            'alert_ram_enabled' => true,
+            'alert_disk_enabled' => true,
+            'alert_bandwidth_enabled' => true,
+        ];
+        $serverRes = $this->request('POST', '/api/servers', $serverPayload, [], $this->getAuthHeaders());
+        $serverId = $serverRes['body']['data']['id'] ?? 0;
+        $serviceCheckId = 1;
+
+        $result = $this->request('DELETE', '/api/servers/' . $serverId . '/service-checks/' . $serviceCheckId, [], [], $this->getAuthHeaders());
+
+        $this->assertSame(404, $result['statusCode']);
+        $this->assertSame('Link not found', $result['body']['message'] ?? '');
+    }
+
+    public function testDetachFromServerReturns404WhenServerNotFound(): void
+    {
+        $result = $this->request('DELETE', '/api/servers/99999/service-checks/1', [], [], $this->getAuthHeaders());
+
+        $this->assertSame(404, $result['statusCode']);
+        $this->assertSame('Server not found', $result['body']['message'] ?? '');
+    }
+
+    public function testDeleteServiceCheckSuccess(): void
+    {
+        $create = $this->request('POST', '/api/service-checks', [
+            'name' => 'ToDelete',
+            'slug' => 'to-delete',
+            'description' => null,
+        ], [], $this->getAuthHeaders());
+        $id = $create['body']['data']['id'] ?? 0;
+
+        $result = $this->request('DELETE', '/api/service-checks/' . $id, [], [], $this->getAuthHeaders());
+
+        $this->assertSame(200, $result['statusCode']);
+        $this->assertTrue($result['body']['success'] ?? false);
+        $this->assertSame('Service check deleted', $result['body']['message'] ?? '');
+        $this->assertArrayHasKey('data', $result['body']);
+        $this->assertNull($result['body']['data']);
+
+        $list = $this->request('GET', '/api/service-checks', [], [], $this->getAuthHeaders());
+        $ids = array_column($list['body']['data']['data'] ?? [], 'id');
+        $this->assertNotContains($id, $ids);
+
+        $get = $this->request('GET', '/api/service-checks/' . $id, [], [], $this->getAuthHeaders());
+        $this->assertSame(404, $get['statusCode']);
+    }
+
+    public function testDeleteNonexistentServiceCheckReturns404(): void
+    {
+        $result = $this->request('DELETE', '/api/service-checks/99999', [], [], $this->getAuthHeaders());
+
+        $this->assertSame(404, $result['statusCode']);
+        $this->assertSame('Service check not found', $result['body']['message'] ?? '');
+    }
+
+    public function testDetachFromServerReturns404WhenServiceCheckNotFound(): void
+    {
+        $serverRes = $this->request('POST', '/api/servers', [
+            'name' => 'Srv',
+            'description' => null,
+            'ip_address' => '10.0.0.1',
+            'is_active' => true,
+            'monitor_resources' => true,
+            'cpu_total' => 4,
+            'ram_total' => 8,
+            'disk_total' => 100,
+            'check_interval_seconds' => 60,
+            'retention_days' => 30,
+            'cpu_alert_threshold' => 90,
+            'ram_alert_threshold' => 90,
+            'disk_alert_threshold' => 90,
+            'bandwidth_alert_threshold' => 100,
+            'alert_cpu_enabled' => true,
+            'alert_ram_enabled' => true,
+            'alert_disk_enabled' => true,
+            'alert_bandwidth_enabled' => true,
+        ], [], $this->getAuthHeaders());
+        $serverId = $serverRes['body']['data']['id'] ?? 0;
+
+        $result = $this->request('DELETE', '/api/servers/' . $serverId . '/service-checks/99999', [], [], $this->getAuthHeaders());
+
+        $this->assertSame(404, $result['statusCode']);
+        $this->assertSame('Service check not found', $result['body']['message'] ?? '');
+    }
+
+    public function testListAvailableServiceChecksByServer(): void
+    {
+        $serverPayload = [
+            'name' => 'Test Server',
+            'description' => null,
+            'ip_address' => '10.0.0.5',
+            'is_active' => true,
+            'monitor_resources' => true,
+            'cpu_total' => 4,
+            'ram_total' => 8,
+            'disk_total' => 100,
+            'check_interval_seconds' => 60,
+            'retention_days' => 30,
+            'cpu_alert_threshold' => 90,
+            'ram_alert_threshold' => 90,
+            'disk_alert_threshold' => 90,
+            'bandwidth_alert_threshold' => 100,
+            'alert_cpu_enabled' => true,
+            'alert_ram_enabled' => true,
+            'alert_disk_enabled' => true,
+            'alert_bandwidth_enabled' => true,
+        ];
+        $serverRes = $this->request('POST', '/api/servers', $serverPayload, [], $this->getAuthHeaders());
+        $serverId = $serverRes['body']['data']['id'] ?? 0;
+
+        $result = $this->request('GET', '/api/servers/' . $serverId . '/service-checks/available', [], [], $this->getAuthHeaders());
+
+        $this->assertSame(200, $result['statusCode']);
+        $this->assertArrayHasKey('data', $result['body']['data']);
+        $this->assertGreaterThanOrEqual(4, count($result['body']['data']['data'] ?? []));
+
+        $this->request('POST', '/api/servers/' . $serverId . '/service-checks/1', [], [], $this->getAuthHeaders());
+        $afterLink = $this->request('GET', '/api/servers/' . $serverId . '/service-checks/available', [], [], $this->getAuthHeaders());
+        $availableSlugs = array_column($afterLink['body']['data']['data'] ?? [], 'slug');
+
+        $this->assertNotContains('nginx', $availableSlugs);
     }
 
     public function testUpdateWithValidationError(): void

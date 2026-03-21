@@ -94,7 +94,11 @@ final class Container
     public function getServerService(): ServerServiceInterface
     {
         if ($this->serverService === null) {
-            $this->serverService = new ServerService($this->getServerRepository(), $this->getUserRepository());
+            $this->serverService = new ServerService(
+                $this->getServerRepository(),
+                $this->getUserRepository(),
+                $this->getServerServiceCheckRepository()
+            );
         }
 
         return $this->serverService;

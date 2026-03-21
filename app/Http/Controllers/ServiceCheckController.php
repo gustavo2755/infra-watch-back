@@ -72,6 +72,15 @@ final class ServiceCheckController
         Response::json(SuccessResource::make('Service checks retrieved', ServiceCheckResource::collection($serviceChecks)));
     }
 
+    public function listAvailableByServer(Request $request): void
+    {
+        $serverId = (int) $request->getParam('serverId');
+
+        $serviceChecks = $this->serviceCheckService->listAvailableByServerId($serverId);
+
+        Response::json(SuccessResource::make('Available service checks retrieved', ServiceCheckResource::collection($serviceChecks)));
+    }
+
     public function attachToServer(Request $request): void
     {
         $serverId = (int) $request->getParam('serverId');
@@ -80,5 +89,24 @@ final class ServiceCheckController
         $this->serviceCheckService->attachToServer($serverId, $serviceCheckId);
 
         Response::json(SuccessResource::make('Service check linked to server'));
+    }
+
+    public function detachFromServer(Request $request): void
+    {
+        $serverId = (int) $request->getParam('serverId');
+        $serviceCheckId = (int) $request->getParam('serviceCheckId');
+
+        $this->serviceCheckService->detachFromServer($serverId, $serviceCheckId);
+
+        Response::json(SuccessResource::make('Service check unlinked successfully', null));
+    }
+
+    public function destroy(Request $request): void
+    {
+        $id = (int) $request->getParam('id');
+
+        $this->serviceCheckService->delete($id);
+
+        Response::json(SuccessResource::make('Service check deleted', null));
     }
 }

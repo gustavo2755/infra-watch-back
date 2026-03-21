@@ -9,6 +9,7 @@ use App\Http\Response;
 use App\Requests\StoreServerRequest;
 use App\Requests\UpdateServerRequest;
 use App\Contracts\ServerServiceInterface;
+use App\Contracts\ServiceCheckServiceInterface;
 use App\Resources\ServerCollectionResource;
 use App\Resources\ServerResource;
 use App\Resources\SuccessResource;
@@ -20,6 +21,7 @@ final class ServerController
 {
     public function __construct(
         private readonly ServerServiceInterface $serverService,
+        private readonly ServiceCheckServiceInterface $serviceCheckService,
         private readonly StoreServerRequest $storeRequest,
         private readonly UpdateServerRequest $updateRequest
     ) {
@@ -44,8 +46,9 @@ final class ServerController
         $data = $this->updateRequest->validate($request->body);
 
         $server = $this->serverService->update($id, $data);
+        $serviceChecks = $this->serviceCheckService->listByServerId($id);
 
-        Response::json(SuccessResource::make('Server updated', ServerResource::make($server)));
+        Response::json(SuccessResource::make('Server updated', ServerResource::make($server, $serviceChecks)));
     }
 
     public function show(Request $request): void
@@ -53,8 +56,9 @@ final class ServerController
         $id = (int) $request->getParam('id');
 
         $server = $this->serverService->findById($id);
+        $serviceChecks = $this->serviceCheckService->listByServerId($id);
 
-        Response::json(SuccessResource::make('Server retrieved', ServerResource::make($server)));
+        Response::json(SuccessResource::make('Server retrieved', ServerResource::make($server, $serviceChecks)));
     }
 
     public function list(Request $request): void
@@ -70,7 +74,15 @@ final class ServerController
             $servers = $this->serverService->list();
         }
 
-        Response::json(SuccessResource::make('Servers retrieved', ServerCollectionResource::make($servers)));
+        Response::json(SuccessResource::make('Servers retrieved', ServerCollectionResource::make($servers, $this->serviceCheckService)));
     }
 
+    public function destroy(Request $request): void
+    {
+        $id = (int) $request->getParam('id');
+
+        $this->serverService->delete($id);
+
+        Response::json(SuccessResource::make('Server deleted', null));
+    }
 }

@@ -7,6 +7,7 @@ namespace Tests\Services;
 use App\Contracts\ServerServiceInterface;
 use App\Exceptions\HttpException;
 use App\Repositories\ServerRepository;
+use App\Repositories\ServerServiceCheckRepository;
 use App\Repositories\UserRepository;
 use App\Services\ServerService;
 use Tests\DatabaseTestCase;
@@ -18,7 +19,11 @@ final class ServerServiceTest extends DatabaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new ServerService(new ServerRepository($this->pdo), new UserRepository($this->pdo));
+        $this->service = new ServerService(
+            new ServerRepository($this->pdo),
+            new UserRepository($this->pdo),
+            new ServerServiceCheckRepository($this->pdo)
+        );
     }
 
     public function testCreateWithValidPayload(): void
@@ -181,5 +186,58 @@ final class ServerServiceTest extends DatabaseTestCase
             'alert_bandwidth_enabled' => true,
             'created_by' => 99999,
         ]);
+    }
+
+    public function testDeleteSuccess(): void
+    {
+        $userId = (int) $this->pdo->query("SELECT id FROM users LIMIT 1")->fetchColumn();
+
+        if ($userId === 0) {
+            $this->pdo->exec("INSERT INTO users (name, email, password, created_at, updated_at) VALUES ('U', 'u@t.com', 'h', datetime('now'), datetime('now'))");
+            $userId = (int) $this->pdo->lastInsertId();
+        }
+
+        $this->pdo->exec("INSERT INTO servers (name, description, ip_address, is_active, monitor_resources, cpu_total, ram_total, disk_total, check_interval_seconds, retention_days, cpu_alert_threshold, ram_alert_threshold, disk_alert_threshold, bandwidth_alert_threshold, alert_cpu_enabled, alert_ram_enabled, alert_disk_enabled, alert_bandwidth_enabled, created_by, created_at, updated_at) VALUES ('ToDelete', null, '1.1.1.1', 1, 1, 2, 4, 50, 60, 30, 90, 90, 90, 100, 1, 1, 1, 1, $userId, datetime('now'), datetime('now'))");
+
+        $id = (int) $this->pdo->lastInsertId();
+
+        $this->service->delete($id);
+
+        $this->expectException(HttpException::class);
+        $this->expectExceptionMessage('Server not found');
+
+        $this->service->findById($id);
+    }
+
+    public function testDeleteThrows404WhenNotFound(): void
+    {
+        $this->expectException(HttpException::class);
+        $this->expectExceptionMessage('Server not found');
+
+        $this->service->delete(99999);
+    }
+
+    public function testDeleteWithLinkedServiceCheck(): void
+    {
+        $userId = (int) $this->pdo->query("SELECT id FROM users LIMIT 1")->fetchColumn();
+
+        if ($userId === 0) {
+            $this->pdo->exec("INSERT INTO users (name, email, password, created_at, updated_at) VALUES ('U', 'u@t.com', 'h', datetime('now'), datetime('now'))");
+            $userId = (int) $this->pdo->lastInsertId();
+        }
+
+        $this->pdo->exec("INSERT INTO servers (name, description, ip_address, is_active, monitor_resources, cpu_total, ram_total, disk_total, check_interval_seconds, retention_days, cpu_alert_threshold, ram_alert_threshold, disk_alert_threshold, bandwidth_alert_threshold, alert_cpu_enabled, alert_ram_enabled, alert_disk_enabled, alert_bandwidth_enabled, created_by, created_at, updated_at) VALUES ('Linked', null, '1.1.1.1', 1, 1, 2, 4, 50, 60, 30, 90, 90, 90, 100, 1, 1, 1, 1, $userId, datetime('now'), datetime('now'))");
+
+        $serverId = (int) $this->pdo->lastInsertId();
+        $serviceCheckId = (int) $this->pdo->query("SELECT id FROM service_checks WHERE slug = 'nginx'")->fetchColumn();
+
+        $this->pdo->exec("INSERT INTO server_service_checks (server_id, service_check_id, created_at, updated_at) VALUES ($serverId, $serviceCheckId, datetime('now'), datetime('now'))");
+
+        $this->service->delete($serverId);
+
+        $this->expectException(HttpException::class);
+        $this->expectExceptionMessage('Server not found');
+
+        $this->service->findById($serverId);
     }
 }

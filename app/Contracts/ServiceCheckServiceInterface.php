@@ -29,8 +29,17 @@ interface ServiceCheckServiceInterface
 
     public function attachToServer(int $serverId, int $serviceCheckId): void;
 
+    public function detachFromServer(int $serverId, int $serviceCheckId): void;
+
+    public function delete(int $id): void;
+
     /**
      * @return list<ServiceCheck>
      */
     public function listByServerId(int $serverId): array;
+
+    /**
+     * @return list<ServiceCheck>
+     */
+    public function listAvailableByServerId(int $serverId): array;
 }
