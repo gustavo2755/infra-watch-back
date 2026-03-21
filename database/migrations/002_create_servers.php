@@ -7,7 +7,7 @@ return function (PDO $pdo, string $driver): void {
     $fk = $driver === 'sqlite'
         ? 'FOREIGN KEY (created_by) REFERENCES users(id)'
         : 'FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL';
-    $sql = "CREATE TABLE servers (
+    $sql = "CREATE TABLE IF NOT EXISTS servers (
         $idCol,
         name VARCHAR(255),
         description TEXT,
@@ -34,6 +34,14 @@ return function (PDO $pdo, string $driver): void {
         $fk
     )";
     $pdo->exec($sql);
-    $pdo->exec('CREATE INDEX idx_servers_name ON servers(name)');
-    $pdo->exec('CREATE INDEX idx_servers_is_active ON servers(is_active)');
+
+    $indexes = ['idx_servers_name' => 'CREATE INDEX idx_servers_name ON servers(name)', 'idx_servers_is_active' => 'CREATE INDEX idx_servers_is_active ON servers(is_active)'];
+    foreach ($indexes as $name => $createSql) {
+        $exists = $driver === 'sqlite'
+            ? (bool) $pdo->query("SELECT 1 FROM sqlite_master WHERE type='index' AND name='$name'")->fetch()
+            : (bool) $pdo->query("SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'servers' AND index_name = '$name'")->fetch();
+        if (!$exists) {
+            $pdo->exec($createSql);
+        }
+    }
 };

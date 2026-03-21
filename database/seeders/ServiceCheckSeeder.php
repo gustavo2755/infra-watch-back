@@ -16,7 +16,6 @@ final class ServiceCheckSeeder
     public function run(): void
     {
         $now = $this->now();
-
         $checks = [
             ['Nginx', 'nginx', 'Web server'],
             ['MySQL', 'mysql', 'Database server'],
@@ -24,10 +23,15 @@ final class ServiceCheckSeeder
             ['PHP-FPM', 'php-fpm', 'PHP process manager'],
         ];
 
-        $stmt = $this->pdo->prepare("INSERT INTO service_checks (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, $now, $now)");
+        $existsStmt = $this->pdo->prepare('SELECT 1 FROM service_checks WHERE slug = ?');
+        $insertStmt = $this->pdo->prepare("INSERT INTO service_checks (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, $now, $now)");
 
         foreach ($checks as $check) {
-            $stmt->execute($check);
+            $existsStmt->execute([$check[1]]);
+            if ($existsStmt->fetch()) {
+                continue;
+            }
+            $insertStmt->execute($check);
         }
     }
 

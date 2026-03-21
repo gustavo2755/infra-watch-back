@@ -15,17 +15,22 @@ final class UserSeeder
 
     public function run(): void
     {
-        $email = $_ENV['SEED_ADMIN_EMAIL'] ?? null;
-        $password = $_ENV['SEED_ADMIN_PASSWORD'] ?? null;
+        $email = $_ENV['SEED_ADMIN_EMAIL'] ?? 'admin@infra.watch';
+        $password = $_ENV['SEED_ADMIN_PASSWORD'] ?? 'password123';
 
-        if (!$email || !$password) {
+        if ($email === '' || $password === '') {
+            return;
+        }
+
+        $check = $this->pdo->prepare('SELECT 1 FROM users WHERE email = ?');
+        $check->execute([$email]);
+        
+        if ($check->fetch()) {
             return;
         }
 
         $hash = password_hash($password, PASSWORD_DEFAULT);
-
         $now = $this->now();
-
         $stmt = $this->pdo->prepare("INSERT INTO users (name, email, password, created_at, updated_at) VALUES (?, ?, ?, $now, $now)");
         $stmt->execute(['Admin', $email, $hash]);
     }
