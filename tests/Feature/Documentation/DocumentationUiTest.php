@@ -18,7 +18,7 @@ final class DocumentationUiTest extends TestCase
     private function requestWeb(string $method, string $path): array
     {
         $request = new Request($method, $path, [], [], [], []);
-        $routes = (require __DIR__ . '/../../routes/web.php')();
+        $routes = (require __DIR__ . '/../../../routes/web.php')();
         $router = new Router($routes);
 
         ob_start();

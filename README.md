@@ -54,6 +54,24 @@ Tests use **SQLite** in memory, isolated from the main MySQL database. The conta
 docker compose exec app ./vendor/bin/phpunit
 ```
 
+You can run test suites by scope:
+
+```bash
+# Run all tests
+docker compose exec app ./vendor/bin/phpunit --testsuite All
+
+# Run only integration tests
+docker compose exec app ./vendor/bin/phpunit --testsuite Integration
+
+# Run only feature tests
+docker compose exec app ./vendor/bin/phpunit --testsuite Feature
+
+# Run only unit tests
+docker compose exec app ./vendor/bin/phpunit --testsuite Unit
+```
+
+Recommended for day-to-day validation: run **Feature** tests first, because they cover the system usage flow end-to-end (route/controller flow and real application behavior). Use **Integration** tests to validate service/repository/migration interactions with the database layer.
+
 The test database is recreated from scratch on each test run. PHP, SQLite or other dependencies are not required on the host machine.
 
 ## Stop environment
