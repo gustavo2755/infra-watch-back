@@ -34,7 +34,6 @@ final class StoreServerRequestTest extends TestCase
             'alert_ram_enabled' => true,
             'alert_disk_enabled' => true,
             'alert_bandwidth_enabled' => true,
-            'created_by' => 1,
         ];
     }
 
@@ -52,7 +51,6 @@ final class StoreServerRequestTest extends TestCase
 
         $this->assertSame('Server 1', $result['name']);
         $this->assertSame('192.168.1.1', $result['ip_address']);
-        $this->assertSame(1, $result['created_by']);
     }
 
     public function testRequiredFieldAbsent(): void
@@ -114,5 +112,60 @@ final class StoreServerRequestTest extends TestCase
         $result = $this->request->validate($data);
 
         $this->assertSame('2024-01-15 10:30:00', $result['last_check_at']);
+    }
+
+    public function testMissingRequiredBoolIsActive(): void
+    {
+        $data = $this->validPayload();
+        unset($data['is_active']);
+
+        $this->expectException(ValidationException::class);
+        $this->request->validate($data);
+    }
+
+    public function testMissingIpAddress(): void
+    {
+        $data = $this->validPayload();
+        unset($data['ip_address']);
+
+        $this->expectException(ValidationException::class);
+        $this->request->validate($data);
+    }
+
+    public function testInvalidNumericCpuTotal(): void
+    {
+        $data = $this->validPayload();
+        $data['cpu_total'] = 'abc';
+
+        $this->expectException(ValidationException::class);
+        $this->request->validate($data);
+    }
+
+    public function testInvalidDateTimeFormat(): void
+    {
+        $data = $this->validPayload();
+        $data['last_check_at'] = 'invalid-date';
+
+        $this->expectException(ValidationException::class);
+        $this->request->validate($data);
+    }
+
+    public function testValidDateTimeAtom(): void
+    {
+        $data = $this->validPayload();
+        $data['last_check_at'] = '2024-01-15T10:30:00+00:00';
+
+        $result = $this->request->validate($data);
+
+        $this->assertSame('2024-01-15T10:30:00+00:00', $result['last_check_at']);
+    }
+
+    public function testEmptyIpAddress(): void
+    {
+        $data = $this->validPayload();
+        $data['ip_address'] = '';
+
+        $this->expectException(ValidationException::class);
+        $this->request->validate($data);
     }
 }

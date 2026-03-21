@@ -51,7 +51,7 @@ final class UpdateServerRequest
             $this->validateNumeric($data, $key, $errors, $validated);
         }
 
-        $optionalInt = ['check_interval_seconds', 'retention_days', 'cpu_alert_threshold', 'ram_alert_threshold', 'disk_alert_threshold', 'bandwidth_alert_threshold', 'created_by'];
+        $optionalInt = ['check_interval_seconds', 'retention_days', 'cpu_alert_threshold', 'ram_alert_threshold', 'disk_alert_threshold', 'bandwidth_alert_threshold'];
 
         foreach ($optionalInt as $key) {
             if (!array_key_exists($key, $data)) {

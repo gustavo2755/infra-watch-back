@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Services;
 
+use App\Contracts\ServerServiceInterface;
 use App\Exceptions\HttpException;
 use App\Repositories\ServerRepository;
 use App\Repositories\UserRepository;
@@ -12,7 +13,7 @@ use Tests\DatabaseTestCase;
 
 final class ServerServiceTest extends DatabaseTestCase
 {
-    private ServerService $service;
+    private ServerServiceInterface $service;
 
     protected function setUp(): void
     {

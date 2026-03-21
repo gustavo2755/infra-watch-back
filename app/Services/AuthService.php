@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\AuthServiceInterface;
 use App\Exceptions\HttpException;
 use App\Models\User;
 use App\Repositories\UserRepository;
@@ -11,7 +12,7 @@ use App\Repositories\UserRepository;
 /**
  * Service for authentication.
  */
-final class AuthService
+final class AuthService implements AuthServiceInterface
 {
     public function __construct(
         private UserRepository $userRepository

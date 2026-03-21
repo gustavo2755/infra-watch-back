@@ -44,7 +44,6 @@ final class StoreServerRequest
         $this->requireBool($data, 'alert_ram_enabled', $errors, $validated);
         $this->requireBool($data, 'alert_disk_enabled', $errors, $validated);
         $this->requireBool($data, 'alert_bandwidth_enabled', $errors, $validated);
-        $this->requireInt($data, 'created_by', $errors, $validated);
 
         if ($errors !== []) {
             throw new ValidationException('Validation failed', $errors);

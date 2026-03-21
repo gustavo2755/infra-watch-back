@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\ServerServiceInterface;
 use App\Exceptions\HttpException;
 use App\Models\Server;
 use App\Repositories\ServerRepository;
@@ -12,7 +13,7 @@ use App\Repositories\UserRepository;
 /**
  * Service for server business logic.
  */
-final class ServerService
+final class ServerService implements ServerServiceInterface
 {
     public function __construct(
         private ServerRepository $serverRepository,
@@ -58,16 +59,6 @@ final class ServerService
 
         if ($server === null) {
             throw new HttpException('Server not found', 404);
-        }
-
-        $createdBy = $data['created_by'] ?? $server->getCreatedBy();
-
-        if ($createdBy !== null) {
-            $user = $this->userRepository->findById((int) $createdBy);
-
-            if ($user === null) {
-                throw new HttpException('User not found', 404);
-            }
         }
 
         $server = $this->applyDataToServer($server, $data);
@@ -196,10 +187,6 @@ final class ServerService
 
         if (array_key_exists('alert_bandwidth_enabled', $data)) {
             $server->setAlertBandwidthEnabled((bool) $data['alert_bandwidth_enabled']);
-        }
-
-        if (array_key_exists('created_by', $data)) {
-            $server->setCreatedBy($data['created_by'] !== null ? (int) $data['created_by'] : null);
         }
 
         return $server;

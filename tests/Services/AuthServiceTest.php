@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Services;
 
+use App\Contracts\AuthServiceInterface;
 use App\Exceptions\HttpException;
 use App\Repositories\UserRepository;
 use App\Services\AuthService;
@@ -11,7 +12,7 @@ use Tests\DatabaseTestCase;
 
 final class AuthServiceTest extends DatabaseTestCase
 {
-    private AuthService $service;
+    private AuthServiceInterface $service;
 
     protected function setUp(): void
     {

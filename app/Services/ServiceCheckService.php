@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\ServiceCheckServiceInterface;
 use App\Exceptions\HttpException;
 use App\Models\ServiceCheck;
 use App\Repositories\ServerRepository;
@@ -13,7 +14,7 @@ use App\Repositories\ServiceCheckRepository;
 /**
  * Service for service check business logic.
  */
-final class ServiceCheckService
+final class ServiceCheckService implements ServiceCheckServiceInterface
 {
     public function __construct(
         private ServiceCheckRepository $serviceCheckRepository,

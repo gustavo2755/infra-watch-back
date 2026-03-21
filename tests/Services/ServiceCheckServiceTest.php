@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Services;
 
+use App\Contracts\ServiceCheckServiceInterface;
 use App\Exceptions\HttpException;
 use App\Repositories\ServerRepository;
 use App\Repositories\ServerServiceCheckRepository;
@@ -13,7 +14,7 @@ use Tests\DatabaseTestCase;
 
 final class ServiceCheckServiceTest extends DatabaseTestCase
 {
-    private ServiceCheckService $service;
+    private ServiceCheckServiceInterface $service;
 
     protected function setUp(): void
     {
@@ -91,6 +92,7 @@ final class ServiceCheckServiceTest extends DatabaseTestCase
             $this->pdo->exec("INSERT INTO users (name, email, password, created_at, updated_at) VALUES ('U', 'u@t.com', 'h', datetime('now'), datetime('now'))");
             $userId = (int) $this->pdo->lastInsertId();
         }
+
         $this->pdo->exec("INSERT INTO servers (name, description, ip_address, is_active, monitor_resources, cpu_total, ram_total, disk_total, check_interval_seconds, retention_days, cpu_alert_threshold, ram_alert_threshold, disk_alert_threshold, bandwidth_alert_threshold, alert_cpu_enabled, alert_ram_enabled, alert_disk_enabled, alert_bandwidth_enabled, created_by, created_at, updated_at) VALUES ('Srv', null, '1.1.1.1', 1, 1, 2, 4, 50, 60, 30, 90, 90, 90, 100, 1, 1, 1, 1, $userId, datetime('now'), datetime('now'))");
 
         $serverId = (int) $this->pdo->lastInsertId();
@@ -122,6 +124,7 @@ final class ServiceCheckServiceTest extends DatabaseTestCase
             $this->pdo->exec("INSERT INTO users (name, email, password, created_at, updated_at) VALUES ('U', 'u@t.com', 'h', datetime('now'), datetime('now'))");
             $userId = (int) $this->pdo->lastInsertId();
         }
+
         $this->pdo->exec("INSERT INTO servers (name, description, ip_address, is_active, monitor_resources, cpu_total, ram_total, disk_total, check_interval_seconds, retention_days, cpu_alert_threshold, ram_alert_threshold, disk_alert_threshold, bandwidth_alert_threshold, alert_cpu_enabled, alert_ram_enabled, alert_disk_enabled, alert_bandwidth_enabled, created_by, created_at, updated_at) VALUES ('Srv', null, '1.1.1.1', 1, 1, 2, 4, 50, 60, 30, 90, 90, 90, 100, 1, 1, 1, 1, $userId, datetime('now'), datetime('now'))");
 
         $serverId = (int) $this->pdo->lastInsertId();

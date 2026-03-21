@@ -61,4 +61,16 @@ final class StoreServiceCheckRequestTest extends TestCase
 
         $this->assertNull($result['description']);
     }
+
+    public function testEmptyName(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->request->validate(['name' => '', 'slug' => 'nginx']);
+    }
+
+    public function testEmptySlug(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->request->validate(['name' => 'Nginx', 'slug' => '']);
+    }
 }

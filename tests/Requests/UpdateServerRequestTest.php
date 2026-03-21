@@ -68,4 +68,28 @@ final class UpdateServerRequestTest extends TestCase
 
         $this->assertTrue($result['is_active']);
     }
+
+    public function testInvalidIpAddress(): void
+    {
+        $data = ['ip_address' => '999.999.999.999'];
+
+        $this->expectException(ValidationException::class);
+        $this->request->validate($data);
+    }
+
+    public function testInvalidDateTimeFormat(): void
+    {
+        $data = ['last_check_at' => 'invalid'];
+
+        $this->expectException(ValidationException::class);
+        $this->request->validate($data);
+    }
+
+    public function testInvalidNumeric(): void
+    {
+        $data = ['cpu_total' => 'not-a-number'];
+
+        $this->expectException(ValidationException::class);
+        $this->request->validate($data);
+    }
 }
