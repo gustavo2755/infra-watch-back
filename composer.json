@@ -24,7 +24,7 @@
     }
   },
   "scripts": {
-    "serve": "php -S 0.0.0.0:8000 -t public",
+    "serve": "php -S 0.0.0.0:8000 -t public public/router.php",
     "test": "phpunit",
     "migrate": "php database/migrate.php",
     "seed": "php database/seed.php"

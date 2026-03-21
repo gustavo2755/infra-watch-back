@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Http\AuthMiddleware;
 use App\Http\Controllers\AuthController;
+use App\Http\Response;
+use App\OpenApi\OpenApiSpec;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServiceCheckController;
 
@@ -29,6 +31,10 @@ return function (App\Container $container): array {
     );
 
     return [
+        ['method' => 'GET', 'path' => '/api/openapi.json', 'handler' => function () {
+            $spec = (new OpenApiSpec())->toArray();
+            Response::json($spec);
+        }],
         ['method' => 'POST', 'path' => '/api/auth/login', 'handler' => $authController->login(...)],
         ['method' => 'POST', 'path' => '/api/auth/logout', 'handler' => $authController->logout(...)],
 
