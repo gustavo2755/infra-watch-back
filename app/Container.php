@@ -8,11 +8,16 @@ use App\Contracts\AuthServiceInterface;
 use App\Contracts\ServerServiceInterface;
 use App\Contracts\ServiceCheckServiceInterface;
 use App\Contracts\TokenServiceInterface;
+use App\Repositories\MonitoringLogRepository;
+use App\Repositories\MonitoringLogServiceCheckRepository;
+use App\Repositories\MonitoringQueueRepository;
 use App\Repositories\ServerRepository;
 use App\Repositories\ServerServiceCheckRepository;
 use App\Repositories\ServiceCheckRepository;
 use App\Repositories\UserRepository;
 use App\Services\AuthService;
+use App\Services\MonitoringService;
+use App\Services\QueueService;
 use App\Services\ServerService;
 use App\Services\ServiceCheckService;
 use App\Services\TokenService;
@@ -28,9 +33,14 @@ final class Container
     private ?ServerRepository $serverRepository = null;
     private ?ServiceCheckRepository $serviceCheckRepository = null;
     private ?ServerServiceCheckRepository $serverServiceCheckRepository = null;
+    private ?MonitoringLogRepository $monitoringLogRepository = null;
+    private ?MonitoringLogServiceCheckRepository $monitoringLogServiceCheckRepository = null;
+    private ?MonitoringQueueRepository $monitoringQueueRepository = null;
     private ?AuthService $authService = null;
     private ?ServerService $serverService = null;
     private ?ServiceCheckService $serviceCheckService = null;
+    private ?MonitoringService $monitoringService = null;
+    private ?QueueService $queueService = null;
     private ?TokenService $tokenService = null;
 
     public function __construct(
@@ -61,6 +71,7 @@ final class Container
             }
 
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
             if ($driver !== 'sqlite') {
                 $this->pdo->exec('SET NAMES utf8mb4');
@@ -97,7 +108,9 @@ final class Container
             $this->serverService = new ServerService(
                 $this->getServerRepository(),
                 $this->getUserRepository(),
-                $this->getServerServiceCheckRepository()
+                $this->getServerServiceCheckRepository(),
+                $this->getMonitoringLogRepository(),
+                $this->getPdo()
             );
         }
 
@@ -117,7 +130,61 @@ final class Container
         return $this->serviceCheckService;
     }
 
-    private function getUserRepository(): UserRepository
+    public function getMonitoringLogRepository(): MonitoringLogRepository
+    {
+        if ($this->monitoringLogRepository === null) {
+            $this->monitoringLogRepository = new MonitoringLogRepository($this->getPdo());
+        }
+
+        return $this->monitoringLogRepository;
+    }
+
+    public function getMonitoringLogServiceCheckRepository(): MonitoringLogServiceCheckRepository
+    {
+        if ($this->monitoringLogServiceCheckRepository === null) {
+            $this->monitoringLogServiceCheckRepository = new MonitoringLogServiceCheckRepository($this->getPdo());
+        }
+
+        return $this->monitoringLogServiceCheckRepository;
+    }
+
+    public function getMonitoringQueueRepository(): MonitoringQueueRepository
+    {
+        if ($this->monitoringQueueRepository === null) {
+            $this->monitoringQueueRepository = new MonitoringQueueRepository($this->getPdo());
+        }
+
+        return $this->monitoringQueueRepository;
+    }
+
+    public function getMonitoringService(): MonitoringService
+    {
+        if ($this->monitoringService === null) {
+            $this->monitoringService = new MonitoringService(
+                $this->getMonitoringLogRepository(),
+                $this->getMonitoringLogServiceCheckRepository(),
+                $this->getServerServiceCheckRepository(),
+                $this->getMonitoringQueueRepository()
+            );
+        }
+
+        return $this->monitoringService;
+    }
+
+    public function getQueueService(): QueueService
+    {
+        if ($this->queueService === null) {
+            $this->queueService = new QueueService(
+                $this->getMonitoringQueueRepository(),
+                $this->getMonitoringService(),
+                30
+            );
+        }
+
+        return $this->queueService;
+    }
+
+    public function getUserRepository(): UserRepository
     {
         if ($this->userRepository === null) {
             $this->userRepository = new UserRepository($this->getPdo());
@@ -126,7 +193,7 @@ final class Container
         return $this->userRepository;
     }
 
-    private function getServerRepository(): ServerRepository
+    public function getServerRepository(): ServerRepository
     {
         if ($this->serverRepository === null) {
             $this->serverRepository = new ServerRepository($this->getPdo());
@@ -135,7 +202,7 @@ final class Container
         return $this->serverRepository;
     }
 
-    private function getServiceCheckRepository(): ServiceCheckRepository
+    public function getServiceCheckRepository(): ServiceCheckRepository
     {
         if ($this->serviceCheckRepository === null) {
             $this->serviceCheckRepository = new ServiceCheckRepository($this->getPdo());
@@ -144,7 +211,7 @@ final class Container
         return $this->serviceCheckRepository;
     }
 
-    private function getServerServiceCheckRepository(): ServerServiceCheckRepository
+    public function getServerServiceCheckRepository(): ServerServiceCheckRepository
     {
         if ($this->serverServiceCheckRepository === null) {
             $this->serverServiceCheckRepository = new ServerServiceCheckRepository($this->getPdo());

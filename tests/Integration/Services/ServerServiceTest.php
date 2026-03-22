@@ -6,6 +6,7 @@ namespace Tests\Services;
 
 use App\Contracts\ServerServiceInterface;
 use App\Exceptions\HttpException;
+use App\Repositories\MonitoringLogRepository;
 use App\Repositories\ServerRepository;
 use App\Repositories\ServerServiceCheckRepository;
 use App\Repositories\UserRepository;
@@ -22,7 +23,9 @@ final class ServerServiceTest extends DatabaseTestCase
         $this->service = new ServerService(
             new ServerRepository($this->pdo),
             new UserRepository($this->pdo),
-            new ServerServiceCheckRepository($this->pdo)
+            new ServerServiceCheckRepository($this->pdo),
+            new MonitoringLogRepository($this->pdo),
+            $this->pdo
         );
     }
 
@@ -239,5 +242,67 @@ final class ServerServiceTest extends DatabaseTestCase
         $this->expectExceptionMessage('Server not found');
 
         $this->service->findById($serverId);
+    }
+
+    public function testDeleteRemovesMonitoringLogsAndSoftDeletesLinks(): void
+    {
+        $userId = (int) $this->pdo->query("SELECT id FROM users LIMIT 1")->fetchColumn();
+
+        if ($userId === 0) {
+            $this->pdo->exec("INSERT INTO users (name, email, password, created_at, updated_at) VALUES ('U', 'u@t.com', 'h', datetime('now'), datetime('now'))");
+            $userId = (int) $this->pdo->lastInsertId();
+        }
+
+        $this->pdo->exec("INSERT INTO servers (name, description, ip_address, is_active, monitor_resources, cpu_total, ram_total, disk_total, check_interval_seconds, retention_days, cpu_alert_threshold, ram_alert_threshold, disk_alert_threshold, bandwidth_alert_threshold, alert_cpu_enabled, alert_ram_enabled, alert_disk_enabled, alert_bandwidth_enabled, created_by, created_at, updated_at) VALUES ('DeleteWithLogs', null, '1.1.1.1', 1, 1, 2, 4, 50, 60, 30, 90, 90, 90, 100, 1, 1, 1, 1, $userId, datetime('now'), datetime('now'))");
+        $serverId = (int) $this->pdo->lastInsertId();
+        $serviceCheckId = (int) $this->pdo->query("SELECT id FROM service_checks WHERE slug = 'nginx'")->fetchColumn();
+
+        $this->pdo->exec("INSERT INTO server_service_checks (server_id, service_check_id, created_at, updated_at) VALUES ($serverId, $serviceCheckId, datetime('now'), datetime('now'))");
+        $this->pdo->exec("INSERT INTO monitoring_logs (server_id, checked_at, is_up, cpu_usage_percent, ram_usage_percent, disk_usage_percent, bandwidth_usage_percent, is_alert, alert_type, error_message, sent_to_email, created_at, updated_at) VALUES ($serverId, datetime('now'), 1, 10, 10, 10, 10, 0, NULL, NULL, NULL, datetime('now'), datetime('now'))");
+        $logId = (int) $this->pdo->lastInsertId();
+        $this->pdo->exec("INSERT INTO monitoring_log_service_checks (monitoring_log_id, service_check_id, is_running, output_message, created_at, updated_at) VALUES ($logId, $serviceCheckId, 1, 'ok', datetime('now'), datetime('now'))");
+
+        $this->service->delete($serverId);
+
+        $serverDeletedAt = $this->pdo->query("SELECT deleted_at FROM servers WHERE id = $serverId")->fetchColumn();
+        $pivotDeletedAt = $this->pdo->query("SELECT deleted_at FROM server_service_checks WHERE server_id = $serverId AND service_check_id = $serviceCheckId")->fetchColumn();
+        $logsCount = $this->pdo->query("SELECT COUNT(*) FROM monitoring_logs WHERE server_id = $serverId")->fetchColumn();
+        $childrenCount = $this->pdo->query("SELECT COUNT(*) FROM monitoring_log_service_checks WHERE monitoring_log_id = $logId")->fetchColumn();
+
+        $this->assertNotNull($serverDeletedAt);
+        $this->assertNotNull($pivotDeletedAt);
+        $this->assertSame(0, (int) $logsCount);
+        $this->assertSame(0, (int) $childrenCount);
+    }
+
+    public function testDeleteRollsBackWhenLogsDeletionFails(): void
+    {
+        $userId = (int) $this->pdo->query("SELECT id FROM users LIMIT 1")->fetchColumn();
+
+        if ($userId === 0) {
+            $this->pdo->exec("INSERT INTO users (name, email, password, created_at, updated_at) VALUES ('U', 'u@t.com', 'h', datetime('now'), datetime('now'))");
+            $userId = (int) $this->pdo->lastInsertId();
+        }
+
+        $this->pdo->exec("INSERT INTO servers (name, description, ip_address, is_active, monitor_resources, cpu_total, ram_total, disk_total, check_interval_seconds, retention_days, cpu_alert_threshold, ram_alert_threshold, disk_alert_threshold, bandwidth_alert_threshold, alert_cpu_enabled, alert_ram_enabled, alert_disk_enabled, alert_bandwidth_enabled, created_by, created_at, updated_at) VALUES ('RollbackDelete', null, '1.1.1.1', 1, 1, 2, 4, 50, 60, 30, 90, 90, 90, 100, 1, 1, 1, 1, $userId, datetime('now'), datetime('now'))");
+        $serverId = (int) $this->pdo->lastInsertId();
+        $serviceCheckId = (int) $this->pdo->query("SELECT id FROM service_checks WHERE slug = 'nginx'")->fetchColumn();
+
+        $this->pdo->exec("INSERT INTO server_service_checks (server_id, service_check_id, created_at, updated_at) VALUES ($serverId, $serviceCheckId, datetime('now'), datetime('now'))");
+        $this->pdo->exec("INSERT INTO monitoring_logs (server_id, checked_at, is_up, cpu_usage_percent, ram_usage_percent, disk_usage_percent, bandwidth_usage_percent, is_alert, alert_type, error_message, sent_to_email, created_at, updated_at) VALUES ($serverId, datetime('now'), 1, 10, 10, 10, 10, 0, NULL, NULL, NULL, datetime('now'), datetime('now'))");
+
+        $this->pdo->exec("CREATE TRIGGER fail_monitoring_logs_delete BEFORE DELETE ON monitoring_logs BEGIN SELECT RAISE(ABORT, 'forced failure'); END");
+
+        $this->expectException(HttpException::class);
+        $this->expectExceptionMessage('It was not possible to complete deletion');
+
+        try {
+            $this->service->delete($serverId);
+        } finally {
+            $serverDeletedAt = $this->pdo->query("SELECT deleted_at FROM servers WHERE id = $serverId")->fetchColumn();
+            $pivotDeletedAt = $this->pdo->query("SELECT deleted_at FROM server_service_checks WHERE server_id = $serverId AND service_check_id = $serviceCheckId")->fetchColumn();
+            $this->assertNull($serverDeletedAt);
+            $this->assertNull($pivotDeletedAt);
+        }
     }
 }

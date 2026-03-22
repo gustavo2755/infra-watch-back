@@ -17,6 +17,9 @@ use App\Resources\SuccessResource;
  */
 final class ServiceCheckController
 {
+    private const DEFAULT_PER_PAGE = 10;
+    private const MAX_PER_PAGE = 100;
+
     public function __construct(
         private readonly ServiceCheckServiceInterface $serviceCheckService,
         private readonly StoreServiceCheckRequest $storeRequest,
@@ -67,18 +70,28 @@ final class ServiceCheckController
 
     public function list(Request $request): void
     {
-        $serviceChecks = $this->serviceCheckService->list();
+        [$page, $perPage] = $this->resolvePagination($request);
+        $result = $this->serviceCheckService->listPaginated($page, $perPage);
+        $meta = $this->buildPaginationMeta($page, $perPage, $result['total']);
 
-        Response::json(SuccessResource::make('Service checks retrieved', ServiceCheckResource::collection($serviceChecks)));
+        Response::json(
+            SuccessResource::make('Service checks retrieved', ServiceCheckResource::collection($result['items'], $meta))
+        );
     }
 
     public function listAvailableByServer(Request $request): void
     {
         $serverId = (int) $request->getParam('serverId');
+        [$page, $perPage] = $this->resolvePagination($request);
+        $result = $this->serviceCheckService->listAvailableByServerIdPaginated($serverId, $page, $perPage);
+        $meta = $this->buildPaginationMeta($page, $perPage, $result['total']);
 
-        $serviceChecks = $this->serviceCheckService->listAvailableByServerId($serverId);
-
-        Response::json(SuccessResource::make('Available service checks retrieved', ServiceCheckResource::collection($serviceChecks)));
+        Response::json(
+            SuccessResource::make(
+                'Available service checks retrieved',
+                ServiceCheckResource::collection($result['items'], $meta)
+            )
+        );
     }
 
     public function attachToServer(Request $request): void
@@ -108,5 +121,34 @@ final class ServiceCheckController
         $this->serviceCheckService->delete($id);
 
         Response::json(SuccessResource::make('Service check deleted', null));
+    }
+
+    /**
+     * @return array{0: int, 1: int}
+     */
+    private function resolvePagination(Request $request): array
+    {
+        $page = max(1, (int) ($request->getQuery('page') ?? '1'));
+        $perPage = max(1, (int) ($request->getQuery('per_page') ?? (string) self::DEFAULT_PER_PAGE));
+        $perPage = min($perPage, self::MAX_PER_PAGE);
+
+        return [$page, $perPage];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildPaginationMeta(int $page, int $perPage, int $total): array
+    {
+        $totalPages = max(1, (int) ceil($total / $perPage));
+
+        return [
+            'page' => $page,
+            'per_page' => $perPage,
+            'total' => $total,
+            'total_pages' => $totalPages,
+            'has_next' => $page < $totalPages,
+            'has_prev' => $page > 1,
+        ];
     }
 }

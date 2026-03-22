@@ -29,14 +29,14 @@ final class ServiceCheckServiceTest extends DatabaseTestCase
     public function testCreateWithValidPayload(): void
     {
         $sc = $this->service->create([
-            'name' => 'Redis',
-            'slug' => 'redis',
+            'name' => 'Redis Test',
+            'slug' => 'test-redis-svc',
             'description' => 'Cache server',
         ]);
 
         $this->assertNotNull($sc->getId());
-        $this->assertSame('Redis', $sc->getName());
-        $this->assertSame('redis', $sc->getSlug());
+        $this->assertSame('Redis Test', $sc->getName());
+        $this->assertSame('test-redis-svc', $sc->getSlug());
     }
 
     public function testUpdateWithValidData(): void

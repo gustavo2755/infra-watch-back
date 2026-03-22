@@ -22,8 +22,10 @@ final class ServerCollectionResourceTest extends TestCase
 
         $this->assertArrayHasKey('data', $result);
         $this->assertArrayHasKey('count', $result);
+        $this->assertArrayHasKey('meta', $result);
         $this->assertCount(2, $result['data']);
         $this->assertSame(2, $result['count']);
+        $this->assertNull($result['meta']);
     }
 
     public function testConsistencyWithSingleItem(): void
@@ -44,6 +46,7 @@ final class ServerCollectionResourceTest extends TestCase
 
         $this->assertSame([], $result['data']);
         $this->assertSame(0, $result['count']);
+        $this->assertNull($result['meta']);
     }
 
     public function testListStructure(): void

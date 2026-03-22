@@ -20,7 +20,7 @@ final class ServiceCheckRepositoryTest extends DatabaseTestCase
 
     public function testCreateAndFindById(): void
     {
-        $sc = new ServiceCheck(null, 'Redis', 'redis', 'Cache server');
+        $sc = new ServiceCheck(null, 'Redis Test', 'test-redis-repo', 'Cache server');
 
         $id = $this->repository->create($sc);
 
@@ -30,7 +30,7 @@ final class ServiceCheckRepositoryTest extends DatabaseTestCase
 
         $this->assertNotNull($found);
         $this->assertSame($id, $found->getId());
-        $this->assertSame('redis', $found->getSlug());
+        $this->assertSame('test-redis-repo', $found->getSlug());
     }
 
     public function testFindBySlug(): void
@@ -43,7 +43,7 @@ final class ServiceCheckRepositoryTest extends DatabaseTestCase
 
     public function testUpdate(): void
     {
-        $sc = new ServiceCheck(null, 'Redis', 'redis', 'Cache');
+        $sc = new ServiceCheck(null, 'Redis Test', 'test-redis-repo-upd', 'Cache');
 
         $id = $this->repository->create($sc);
         $sc->setId($id);
@@ -106,5 +106,22 @@ final class ServiceCheckRepositoryTest extends DatabaseTestCase
         $ids = array_map(fn (ServiceCheck $s) => $s->getId(), $list);
         $this->assertContains($id1, $ids);
         $this->assertNotContains($id2, $ids);
+    }
+
+    public function testListPaginatedAndCount(): void
+    {
+        $this->repository->create(new ServiceCheck(null, 'Paginated A', 'paginated-a', null));
+        $this->repository->create(new ServiceCheck(null, 'Paginated B', 'paginated-b', null));
+        $id = $this->repository->create(new ServiceCheck(null, 'Paginated C', 'paginated-c', null));
+        $this->repository->delete($id);
+
+        $page = $this->repository->listPaginated(1, 2);
+        $total = $this->repository->countAll();
+
+        $this->assertCount(2, $page);
+        $this->assertGreaterThanOrEqual(2, $total);
+        foreach ($page as $item) {
+            $this->assertNotSame($id, $item->getId());
+        }
     }
 }

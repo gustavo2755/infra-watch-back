@@ -43,13 +43,14 @@ final class ServiceCheckResource extends BaseResource
      * @param list<ServiceCheck> $serviceChecks
      * @return array<string, mixed>
      */
-    public static function collection(array $serviceChecks): array
+    public static function collection(array $serviceChecks, ?array $meta = null): array
     {
         $data = array_map(fn (ServiceCheck $sc) => self::make($sc), $serviceChecks);
 
         return [
             'data' => $data,
             'count' => count($data),
+            'meta' => $meta,
         ];
     }
 }

@@ -10,7 +10,7 @@ final class MigrationsTest extends DatabaseTestCase
 {
     public function testTablesAreCreated(): void
     {
-        $tables = ['users', 'servers', 'service_checks', 'server_service_checks'];
+        $tables = ['users', 'servers', 'service_checks', 'server_service_checks', 'monitoring_logs', 'monitoring_log_service_checks'];
 
         foreach ($tables as $table) {
             $stmt = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='$table'");
@@ -47,7 +47,7 @@ final class MigrationsTest extends DatabaseTestCase
         }
     }
 
-    public function testServersTableHasIndexesOnNameAndIsActive(): void
+    public function testServersTableHasIndexesOnNameIsActiveAndLastCheckAt(): void
     {
         $stmt = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='servers' AND name LIKE 'idx_servers_%'");
 
@@ -55,6 +55,7 @@ final class MigrationsTest extends DatabaseTestCase
 
         $this->assertContains('idx_servers_name', $indexes);
         $this->assertContains('idx_servers_is_active', $indexes);
+        $this->assertContains('idx_servers_last_check_at', $indexes);
     }
 
     public function testServiceChecksTableHasSlugNotCheckCommand(): void
@@ -94,6 +95,83 @@ final class MigrationsTest extends DatabaseTestCase
         $this->assertContains('deleted_at', $cols);
     }
 
+    public function testMonitoringLogsTableHasExpectedColumns(): void
+    {
+        $cols = $this->getColumns('monitoring_logs');
+
+        $expected = [
+            'id',
+            'server_id',
+            'checked_at',
+            'is_up',
+            'cpu_usage_percent',
+            'ram_usage_percent',
+            'disk_usage_percent',
+            'bandwidth_usage_percent',
+            'is_alert',
+            'alert_type',
+            'error_message',
+            'sent_to_email',
+            'created_at',
+            'updated_at',
+        ];
+
+        foreach ($expected as $col) {
+            $this->assertContains($col, $cols, "monitoring_logs should have column $col");
+        }
+    }
+
+    public function testMonitoringLogServiceChecksTableHasExpectedColumns(): void
+    {
+        $cols = $this->getColumns('monitoring_log_service_checks');
+
+        $expected = [
+            'id',
+            'monitoring_log_id',
+            'service_check_id',
+            'is_running',
+            'output_message',
+            'created_at',
+            'updated_at',
+        ];
+
+        foreach ($expected as $col) {
+            $this->assertContains($col, $cols, "monitoring_log_service_checks should have column $col");
+        }
+    }
+
+    public function testMonitoringLogsHasExpectedForeignKey(): void
+    {
+        $fks = $this->getForeignKeyTargets('monitoring_logs');
+
+        $this->assertContains(['from' => 'server_id', 'table' => 'servers', 'to' => 'id'], $fks);
+    }
+
+    public function testMonitoringLogServiceChecksHasExpectedForeignKeys(): void
+    {
+        $fks = $this->getForeignKeyTargets('monitoring_log_service_checks');
+
+        $this->assertContains(['from' => 'monitoring_log_id', 'table' => 'monitoring_logs', 'to' => 'id'], $fks);
+        $this->assertContains(['from' => 'service_check_id', 'table' => 'service_checks', 'to' => 'id'], $fks);
+    }
+
+    public function testMonitoringLogsHasExpectedIndexes(): void
+    {
+        $indexes = $this->getIndexes('monitoring_logs');
+
+        $this->assertContains('idx_monitoring_logs_server_id', $indexes);
+        $this->assertContains('idx_monitoring_logs_checked_at', $indexes);
+        $this->assertContains('idx_monitoring_logs_is_alert', $indexes);
+        $this->assertContains('idx_monitoring_logs_server_checked_at', $indexes);
+    }
+
+    public function testMonitoringLogServiceChecksHasExpectedIndexes(): void
+    {
+        $indexes = $this->getIndexes('monitoring_log_service_checks');
+
+        $this->assertContains('idx_monitoring_log_service_checks_monitoring_log_id', $indexes);
+    }
+
     public function testSeedServiceChecksWithSlugs(): void
     {
         $stmt = $this->pdo->query('SELECT slug FROM service_checks ORDER BY slug');
@@ -112,6 +190,22 @@ final class MigrationsTest extends DatabaseTestCase
         $this->pdo->exec('INSERT INTO server_service_checks (server_id, service_check_id, created_at, updated_at) VALUES (1, 1, datetime("now"), datetime("now"))');
 
         $stmt = $this->pdo->query('SELECT 1 FROM server_service_checks WHERE server_id = 1 AND service_check_id = 1');
+
+        $this->assertNotFalse($stmt->fetch());
+    }
+
+    public function testMonitoringStructureRelationshipIntegrity(): void
+    {
+        $this->pdo->exec('INSERT INTO servers (name, ip_address, created_at, updated_at) VALUES ("srv-monitor", "10.0.0.10", datetime("now"), datetime("now"))');
+        $serverId = (int) $this->pdo->lastInsertId();
+        $serviceCheckId = (int) $this->pdo->query('SELECT id FROM service_checks LIMIT 1')->fetchColumn();
+
+        $this->pdo->exec("INSERT INTO monitoring_logs (server_id, checked_at, is_up, is_alert, created_at, updated_at) VALUES ($serverId, datetime('now'), 1, 0, datetime('now'), datetime('now'))");
+        $monitoringLogId = (int) $this->pdo->lastInsertId();
+
+        $this->pdo->exec("INSERT INTO monitoring_log_service_checks (monitoring_log_id, service_check_id, is_running, output_message, created_at, updated_at) VALUES ($monitoringLogId, $serviceCheckId, 1, 'ok', datetime('now'), datetime('now'))");
+
+        $stmt = $this->pdo->query("SELECT 1 FROM monitoring_log_service_checks WHERE monitoring_log_id = $monitoringLogId AND service_check_id = $serviceCheckId");
 
         $this->assertNotFalse($stmt->fetch());
     }
@@ -160,5 +254,36 @@ final class MigrationsTest extends DatabaseTestCase
         }
 
         return $pk;
+    }
+
+    /**
+     * @return list<array{from: string, table: string, to: string}>
+     */
+    private function getForeignKeyTargets(string $table): array
+    {
+        $stmt = $this->pdo->query("PRAGMA foreign_key_list($table)");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $fks = [];
+        foreach ($rows as $row) {
+            $fks[] = [
+                'from' => (string) $row['from'],
+                'table' => (string) $row['table'],
+                'to' => (string) $row['to'],
+            ];
+        }
+
+        return $fks;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getIndexes(string $table): array
+    {
+        $stmt = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='$table'");
+        $indexes = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        return array_values(array_filter($indexes, static fn ($name): bool => !str_starts_with((string) $name, 'sqlite_autoindex_')));
     }
 }

@@ -32,6 +32,7 @@ final class Server
     private ?int $createdBy = null;
     private ?string $createdAt = null;
     private ?string $updatedAt = null;
+    private ?string $deletedAt = null;
 
     public function __construct(
         ?int $id = null,
@@ -56,7 +57,8 @@ final class Server
         bool $alertBandwidthEnabled = true,
         ?int $createdBy = null,
         ?string $createdAt = null,
-        ?string $updatedAt = null
+        ?string $updatedAt = null,
+        ?string $deletedAt = null
     ) {
         $this->id = $id;
         $this->name = $name;
@@ -81,6 +83,7 @@ final class Server
         $this->createdBy = $createdBy;
         $this->createdAt = $createdAt;
         $this->updatedAt = $updatedAt;
+        $this->deletedAt = $deletedAt;
     }
 
     public function getId(): ?int
@@ -336,35 +339,15 @@ final class Server
         return $this;
     }
 
-    /**
-     * @param array<string, mixed> $data Validated payload (e.g. from StoreServerRequest)
-     */
-    public static function fromArray(array $data): self
+    public function getDeletedAt(): ?string
     {
-        return new self(
-            null,
-            $data['name'] ?? null,
-            $data['description'] ?? null,
-            $data['ip_address'] ?? null,
-            isset($data['is_active']) ? (bool) $data['is_active'] : true,
-            isset($data['monitor_resources']) ? (bool) $data['monitor_resources'] : true,
-            isset($data['cpu_total']) ? (float) $data['cpu_total'] : null,
-            isset($data['ram_total']) ? (float) $data['ram_total'] : null,
-            isset($data['disk_total']) ? (float) $data['disk_total'] : null,
-            isset($data['check_interval_seconds']) ? (int) $data['check_interval_seconds'] : null,
-            $data['last_check_at'] ?? null,
-            isset($data['retention_days']) ? (int) $data['retention_days'] : null,
-            isset($data['cpu_alert_threshold']) ? (float) $data['cpu_alert_threshold'] : null,
-            isset($data['ram_alert_threshold']) ? (float) $data['ram_alert_threshold'] : null,
-            isset($data['disk_alert_threshold']) ? (float) $data['disk_alert_threshold'] : null,
-            isset($data['bandwidth_alert_threshold']) ? (float) $data['bandwidth_alert_threshold'] : null,
-            isset($data['alert_cpu_enabled']) ? (bool) $data['alert_cpu_enabled'] : true,
-            isset($data['alert_ram_enabled']) ? (bool) $data['alert_ram_enabled'] : true,
-            isset($data['alert_disk_enabled']) ? (bool) $data['alert_disk_enabled'] : true,
-            isset($data['alert_bandwidth_enabled']) ? (bool) $data['alert_bandwidth_enabled'] : true,
-            isset($data['created_by']) ? (int) $data['created_by'] : null,
-            null,
-            null
-        );
+        return $this->deletedAt;
     }
+
+    public function setDeletedAt(?string $deletedAt): self
+    {
+        $this->deletedAt = $deletedAt;
+        return $this;
+    }
+
 }

@@ -18,4 +18,11 @@ final class DatabaseSeeder
         (new UserSeeder($this->pdo))->run();
         (new ServiceCheckSeeder($this->pdo))->run();
     }
+
+    public function runDemoData(): void
+    {
+        (new ServerSeeder($this->pdo))->run();
+        (new ServerServiceCheckLinkSeeder($this->pdo))->run();
+        (new MonitoringLogSeeder($this->pdo))->run();
+    }
 }

@@ -70,8 +70,10 @@ final class ServiceCheckResourceTest extends TestCase
 
         $this->assertArrayHasKey('data', $result);
         $this->assertArrayHasKey('count', $result);
+        $this->assertArrayHasKey('meta', $result);
         $this->assertCount(2, $result['data']);
         $this->assertSame(2, $result['count']);
+        $this->assertNull($result['meta']);
         $this->assertSame('nginx', $result['data'][0]['slug']);
         $this->assertSame('mysql', $result['data'][1]['slug']);
     }
@@ -82,5 +84,6 @@ final class ServiceCheckResourceTest extends TestCase
 
         $this->assertSame([], $result['data']);
         $this->assertSame(0, $result['count']);
+        $this->assertNull($result['meta']);
     }
 }

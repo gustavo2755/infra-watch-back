@@ -7,9 +7,12 @@ namespace App\Services;
 use App\Contracts\ServerServiceInterface;
 use App\Exceptions\HttpException;
 use App\Models\Server;
+use App\Repositories\MonitoringLogRepository;
 use App\Repositories\ServerRepository;
 use App\Repositories\ServerServiceCheckRepository;
 use App\Repositories\UserRepository;
+use PDO;
+use Throwable;
 
 /**
  * Service for server business logic.
@@ -19,7 +22,9 @@ final class ServerService implements ServerServiceInterface
     public function __construct(
         private ServerRepository $serverRepository,
         private UserRepository $userRepository,
-        private ServerServiceCheckRepository $serverServiceCheckRepository
+        private ServerServiceCheckRepository $serverServiceCheckRepository,
+        private MonitoringLogRepository $monitoringLogRepository,
+        private PDO $pdo
     ) {
     }
 
@@ -41,7 +46,32 @@ final class ServerService implements ServerServiceInterface
             }
         }
 
-        $server = Server::fromArray($data);
+        $server = new Server(
+            null,
+            $data['name'] ?? null,
+            $data['description'] ?? null,
+            $data['ip_address'] ?? null,
+            isset($data['is_active']) ? (bool) $data['is_active'] : true,
+            isset($data['monitor_resources']) ? (bool) $data['monitor_resources'] : true,
+            isset($data['cpu_total']) ? (float) $data['cpu_total'] : null,
+            isset($data['ram_total']) ? (float) $data['ram_total'] : null,
+            isset($data['disk_total']) ? (float) $data['disk_total'] : null,
+            isset($data['check_interval_seconds']) ? (int) $data['check_interval_seconds'] : null,
+            $data['last_check_at'] ?? null,
+            isset($data['retention_days']) ? (int) $data['retention_days'] : null,
+            isset($data['cpu_alert_threshold']) ? (float) $data['cpu_alert_threshold'] : null,
+            isset($data['ram_alert_threshold']) ? (float) $data['ram_alert_threshold'] : null,
+            isset($data['disk_alert_threshold']) ? (float) $data['disk_alert_threshold'] : null,
+            isset($data['bandwidth_alert_threshold']) ? (float) $data['bandwidth_alert_threshold'] : null,
+            isset($data['alert_cpu_enabled']) ? (bool) $data['alert_cpu_enabled'] : true,
+            isset($data['alert_ram_enabled']) ? (bool) $data['alert_ram_enabled'] : true,
+            isset($data['alert_disk_enabled']) ? (bool) $data['alert_disk_enabled'] : true,
+            isset($data['alert_bandwidth_enabled']) ? (bool) $data['alert_bandwidth_enabled'] : true,
+            $createdBy,
+            null,
+            null,
+            null
+        );
 
         $id = $this->serverRepository->create($server);
         $server->setId($id);
@@ -111,6 +141,39 @@ final class ServerService implements ServerServiceInterface
     }
 
     /**
+     * @return array{items: list<Server>, total: int}
+     */
+    public function listPaginated(int $page, int $perPage): array
+    {
+        return [
+            'items' => $this->serverRepository->listPaginated($page, $perPage),
+            'total' => $this->serverRepository->countAll(),
+        ];
+    }
+
+    /**
+     * @return array{items: list<Server>, total: int}
+     */
+    public function filterByNamePaginated(string $name, int $page, int $perPage): array
+    {
+        return [
+            'items' => $this->serverRepository->filterByNamePaginated($name, $page, $perPage),
+            'total' => $this->serverRepository->countByName($name),
+        ];
+    }
+
+    /**
+     * @return array{items: list<Server>, total: int}
+     */
+    public function filterByIsActivePaginated(bool $isActive, int $page, int $perPage): array
+    {
+        return [
+            'items' => $this->serverRepository->filterByIsActivePaginated($isActive, $page, $perPage),
+            'total' => $this->serverRepository->countByIsActive($isActive),
+        ];
+    }
+
+    /**
      * Deletes a server and its links.
      *
      * @throws HttpException 404 when server not found
@@ -123,8 +186,20 @@ final class ServerService implements ServerServiceInterface
             throw new HttpException('Server not found', 404);
         }
 
-        $this->serverServiceCheckRepository->deleteByServerId($id);
-        $this->serverRepository->delete($id);
+        $this->pdo->beginTransaction();
+
+        try {
+            $this->serverServiceCheckRepository->deleteByServerId($id);
+            $this->monitoringLogRepository->deleteByServerId($id);
+            $this->serverRepository->delete($id);
+            $this->pdo->commit();
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw new HttpException('It was not possible to complete deletion', 500, $e);
+        }
     }
 
     /**

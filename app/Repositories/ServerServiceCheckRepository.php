@@ -30,7 +30,7 @@ final class ServerServiceCheckRepository extends BaseRepository
      */
     public function listByServerId(int $serverId): array
     {
-        $sql = 'SELECT sc.id, sc.name, sc.slug, sc.description, sc.created_at, sc.updated_at
+        $sql = 'SELECT sc.id, sc.name, sc.slug, sc.description, sc.created_at, sc.updated_at, sc.deleted_at
                 FROM service_checks sc
                 INNER JOIN server_service_checks ssc ON ssc.service_check_id = sc.id AND ssc.deleted_at IS NULL
                 WHERE ssc.server_id = ? AND sc.deleted_at IS NULL
@@ -45,7 +45,7 @@ final class ServerServiceCheckRepository extends BaseRepository
      */
     public function listUnlinkedByServerId(int $serverId): array
     {
-        $sql = 'SELECT sc.id, sc.name, sc.slug, sc.description, sc.created_at, sc.updated_at
+        $sql = 'SELECT sc.id, sc.name, sc.slug, sc.description, sc.created_at, sc.updated_at, sc.deleted_at
                 FROM service_checks sc
                 LEFT JOIN server_service_checks ssc ON ssc.service_check_id = sc.id AND ssc.server_id = ? AND ssc.deleted_at IS NULL
                 WHERE ssc.server_id IS NULL AND sc.deleted_at IS NULL
@@ -53,6 +53,36 @@ final class ServerServiceCheckRepository extends BaseRepository
         $rows = $this->fetchAll($sql, [$serverId]);
 
         return array_map(fn (array $r) => $this->mapRowToServiceCheck($r), $rows);
+    }
+
+    /**
+     * @return list<ServiceCheck>
+     */
+    public function listUnlinkedByServerIdPaginated(int $serverId, int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $sql = 'SELECT sc.id, sc.name, sc.slug, sc.description, sc.created_at, sc.updated_at, sc.deleted_at
+                FROM service_checks sc
+                LEFT JOIN server_service_checks ssc ON ssc.service_check_id = sc.id AND ssc.server_id = ? AND ssc.deleted_at IS NULL
+                WHERE ssc.server_id IS NULL AND sc.deleted_at IS NULL
+                ORDER BY sc.id
+                LIMIT ? OFFSET ?';
+        $rows = $this->fetchAll($sql, [$serverId, $perPage, $offset]);
+
+        return array_map(fn (array $r) => $this->mapRowToServiceCheck($r), $rows);
+    }
+
+    public function countUnlinkedByServerId(int $serverId): int
+    {
+        $row = $this->fetchOne(
+            'SELECT COUNT(*) AS total
+             FROM service_checks sc
+             LEFT JOIN server_service_checks ssc ON ssc.service_check_id = sc.id AND ssc.server_id = ? AND ssc.deleted_at IS NULL
+             WHERE ssc.server_id IS NULL AND sc.deleted_at IS NULL',
+            [$serverId]
+        );
+
+        return (int) ($row['total'] ?? 0);
     }
 
     /**
@@ -106,7 +136,8 @@ final class ServerServiceCheckRepository extends BaseRepository
             $row['slug'] ?? null,
             $row['description'] ?? null,
             $row['created_at'] ?? null,
-            $row['updated_at'] ?? null
+            $row['updated_at'] ?? null,
+            $row['deleted_at'] ?? null
         );
     }
 }

@@ -30,7 +30,15 @@ final class ServiceCheckService implements ServiceCheckServiceInterface
      */
     public function create(array $data): ServiceCheck
     {
-        $serviceCheck = ServiceCheck::fromArray($data);
+        $serviceCheck = new ServiceCheck(
+            null,
+            $data['name'],
+            $data['slug'],
+            $data['description'] ?? null,
+            null,
+            null,
+            null
+        );
 
         $id = $this->serviceCheckRepository->create($serviceCheck);
         $serviceCheck->setId($id);
@@ -93,6 +101,17 @@ final class ServiceCheckService implements ServiceCheckServiceInterface
     public function list(): array
     {
         return $this->serviceCheckRepository->list();
+    }
+
+    /**
+     * @return array{items: list<ServiceCheck>, total: int}
+     */
+    public function listPaginated(int $page, int $perPage): array
+    {
+        return [
+            'items' => $this->serviceCheckRepository->listPaginated($page, $perPage),
+            'total' => $this->serviceCheckRepository->countAll(),
+        ];
     }
 
     /**
@@ -191,6 +210,24 @@ final class ServiceCheckService implements ServiceCheckServiceInterface
         }
 
         return $this->serverServiceCheckRepository->listUnlinkedByServerId($serverId);
+    }
+
+    /**
+     * @return array{items: list<ServiceCheck>, total: int}
+     * @throws HttpException 404 when server not found
+     */
+    public function listAvailableByServerIdPaginated(int $serverId, int $page, int $perPage): array
+    {
+        $server = $this->serverRepository->findById($serverId);
+
+        if ($server === null) {
+            throw new HttpException('Server not found', 404);
+        }
+
+        return [
+            'items' => $this->serverServiceCheckRepository->listUnlinkedByServerIdPaginated($serverId, $page, $perPage),
+            'total' => $this->serverServiceCheckRepository->countUnlinkedByServerId($serverId),
+        ];
     }
 
     /**

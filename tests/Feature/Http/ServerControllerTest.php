@@ -116,7 +116,28 @@ final class ServerControllerTest extends HttpTestCase
         $this->assertSame(200, $result['statusCode']);
         $this->assertArrayHasKey('data', $result['body']);
         $this->assertArrayHasKey('data', $result['body']['data']);
+        $this->assertArrayHasKey('meta', $result['body']['data']);
+        $this->assertSame(10, $result['body']['data']['meta']['per_page'] ?? null);
+        $this->assertSame(1, $result['body']['data']['meta']['page'] ?? null);
         $this->assertIsArray($result['body']['data']['data']);
+    }
+
+    public function testListPaginationWithPageAndPerPage(): void
+    {
+        for ($i = 1; $i <= 12; $i++) {
+            $payload = $this->validServerPayload();
+            $payload['name'] = 'Paginated Server ' . $i;
+            $payload['ip_address'] = '10.10.10.' . $i;
+            $this->request('POST', '/api/servers', $payload, [], $this->getAuthHeaders());
+        }
+
+        $result = $this->request('GET', '/api/servers', [], ['page' => '2', 'per_page' => '5'], $this->getAuthHeaders());
+
+        $this->assertSame(200, $result['statusCode']);
+        $this->assertCount(5, $result['body']['data']['data'] ?? []);
+        $this->assertSame(2, $result['body']['data']['meta']['page'] ?? null);
+        $this->assertSame(5, $result['body']['data']['meta']['per_page'] ?? null);
+        $this->assertGreaterThanOrEqual(12, $result['body']['data']['meta']['total'] ?? 0);
     }
 
     public function testFilterByName(): void

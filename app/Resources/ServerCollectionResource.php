@@ -17,7 +17,8 @@ final class ServerCollectionResource extends BaseResource
      */
     public function __construct(
         private readonly array $servers,
-        private readonly ?ServiceCheckServiceInterface $serviceCheckService = null
+        private readonly ?ServiceCheckServiceInterface $serviceCheckService = null,
+        private readonly ?array $meta = null
     ) {
     }
 
@@ -38,6 +39,7 @@ final class ServerCollectionResource extends BaseResource
         return [
             'data' => $data,
             'count' => count($data),
+            'meta' => $this->meta,
         ];
     }
 
@@ -48,5 +50,15 @@ final class ServerCollectionResource extends BaseResource
     public static function make(array $servers, ?ServiceCheckServiceInterface $serviceCheckService = null): array
     {
         return (new self($servers, $serviceCheckService))->toArray();
+    }
+
+    /**
+     * @param list<Server> $servers
+     * @param array<string, mixed> $meta
+     * @return array<string, mixed>
+     */
+    public static function makePaginated(array $servers, array $meta, ?ServiceCheckServiceInterface $serviceCheckService = null): array
+    {
+        return (new self($servers, $serviceCheckService, $meta))->toArray();
     }
 }

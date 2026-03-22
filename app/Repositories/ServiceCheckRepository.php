@@ -14,14 +14,14 @@ final class ServiceCheckRepository extends BaseRepository
 {
     public function findById(int $id): ?ServiceCheck
     {
-        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE id = ? AND deleted_at IS NULL', [$id]);
+        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at, deleted_at FROM service_checks WHERE id = ? AND deleted_at IS NULL', [$id]);
 
         return $row ? $this->mapRowToServiceCheck($row) : null;
     }
 
     public function findBySlug(string $slug): ?ServiceCheck
     {
-        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE slug = ? AND deleted_at IS NULL', [$slug]);
+        $row = $this->fetchOne('SELECT id, name, slug, description, created_at, updated_at, deleted_at FROM service_checks WHERE slug = ? AND deleted_at IS NULL', [$slug]);
 
         return $row ? $this->mapRowToServiceCheck($row) : null;
     }
@@ -68,9 +68,30 @@ final class ServiceCheckRepository extends BaseRepository
      */
     public function list(): array
     {
-        $rows = $this->fetchAll('SELECT id, name, slug, description, created_at, updated_at FROM service_checks WHERE deleted_at IS NULL ORDER BY id');
+        $rows = $this->fetchAll('SELECT id, name, slug, description, created_at, updated_at, deleted_at FROM service_checks WHERE deleted_at IS NULL ORDER BY id');
 
         return array_map(fn (array $r) => $this->mapRowToServiceCheck($r), $rows);
+    }
+
+    /**
+     * @return list<ServiceCheck>
+     */
+    public function listPaginated(int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $rows = $this->fetchAll(
+            'SELECT id, name, slug, description, created_at, updated_at, deleted_at FROM service_checks WHERE deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?',
+            [$perPage, $offset]
+        );
+
+        return array_map(fn (array $r) => $this->mapRowToServiceCheck($r), $rows);
+    }
+
+    public function countAll(): int
+    {
+        $row = $this->fetchOne('SELECT COUNT(*) AS total FROM service_checks WHERE deleted_at IS NULL');
+
+        return (int) ($row['total'] ?? 0);
     }
 
     /**
@@ -84,7 +105,8 @@ final class ServiceCheckRepository extends BaseRepository
             $row['slug'] ?? null,
             $row['description'] ?? null,
             $row['created_at'] ?? null,
-            $row['updated_at'] ?? null
+            $row['updated_at'] ?? null,
+            $row['deleted_at'] ?? null
         );
     }
 }

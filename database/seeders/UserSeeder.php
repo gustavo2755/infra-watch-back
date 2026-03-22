@@ -15,8 +15,8 @@ final class UserSeeder
 
     public function run(): void
     {
-        $email = $_ENV['SEED_ADMIN_EMAIL'] ?? 'admin@infra.watch';
-        $password = $_ENV['SEED_ADMIN_PASSWORD'] ?? 'password123';
+        $email = $_ENV['SEED_ADMIN_EMAIL'] ?? getenv('SEED_ADMIN_EMAIL') ?: 'admin@admin.com';
+        $password = $_ENV['SEED_ADMIN_PASSWORD'] ?? getenv('SEED_ADMIN_PASSWORD') ?: 'qweqwe';
 
         if ($email === '' || $password === '') {
             return;

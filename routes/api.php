@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\AuthMiddleware;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\MonitoringLogController;
 use App\Http\Response;
 use App\OpenApi\OpenApiSpec;
 use App\Http\Controllers\ServerController;
@@ -30,6 +31,10 @@ return function (App\Container $container): array {
         new App\Requests\StoreServiceCheckRequest(),
         new App\Requests\UpdateServiceCheckRequest()
     );
+    $monitoringLogController = new MonitoringLogController(
+        $container->getMonitoringLogRepository(),
+        $container->getMonitoringLogServiceCheckRepository()
+    );
 
     return [
         ['method' => 'GET', 'path' => '/api/openapi.json', 'handler' => function () {
@@ -54,5 +59,9 @@ return function (App\Container $container): array {
         ['method' => 'GET', 'path' => '/api/servers/{serverId}/service-checks/available', 'handler' => $serviceCheckController->listAvailableByServer(...), 'middleware' => $auth],
         ['method' => 'POST', 'path' => '/api/servers/{serverId}/service-checks/{serviceCheckId}', 'handler' => $serviceCheckController->attachToServer(...), 'middleware' => $auth],
         ['method' => 'DELETE', 'path' => '/api/servers/{serverId}/service-checks/{serviceCheckId}', 'handler' => $serviceCheckController->detachFromServer(...), 'middleware' => $auth],
+        ['method' => 'GET', 'path' => '/api/monitoring-logs', 'handler' => $monitoringLogController->list(...), 'middleware' => $auth],
+        ['method' => 'GET', 'path' => '/api/monitoring-logs/{id}', 'handler' => $monitoringLogController->show(...), 'middleware' => $auth],
+        ['method' => 'GET', 'path' => '/api/servers/{serverId}/monitoring-logs', 'handler' => $monitoringLogController->listByServer(...), 'middleware' => $auth],
+        ['method' => 'GET', 'path' => '/api/servers/{serverId}/monitoring-logs/dashboard', 'handler' => $monitoringLogController->dashboard(...), 'middleware' => $auth],
     ];
 };
