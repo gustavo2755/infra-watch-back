@@ -114,6 +114,27 @@ final class ServerRepository extends BaseRepository
     /**
      * @return list<Server>
      */
+    public function listPaginated(int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $rows = $this->fetchAll(
+            'SELECT ' . self::COLUMNS . ' FROM servers WHERE deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?',
+            [$perPage, $offset]
+        );
+
+        return array_map(fn (array $r) => $this->mapRowToServer($r), $rows);
+    }
+
+    public function countAll(): int
+    {
+        $row = $this->fetchOne('SELECT COUNT(*) AS total FROM servers WHERE deleted_at IS NULL');
+
+        return (int) ($row['total'] ?? 0);
+    }
+
+    /**
+     * @return list<Server>
+     */
     public function filterByName(string $name): array
     {
         $rows = $this->fetchAll('SELECT ' . self::COLUMNS . ' FROM servers WHERE name LIKE ? AND deleted_at IS NULL ORDER BY id', ['%' . $name . '%']);
@@ -124,11 +145,59 @@ final class ServerRepository extends BaseRepository
     /**
      * @return list<Server>
      */
+    public function filterByNamePaginated(string $name, int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $rows = $this->fetchAll(
+            'SELECT ' . self::COLUMNS . ' FROM servers WHERE name LIKE ? AND deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?',
+            ['%' . $name . '%', $perPage, $offset]
+        );
+
+        return array_map(fn (array $r) => $this->mapRowToServer($r), $rows);
+    }
+
+    public function countByName(string $name): int
+    {
+        $row = $this->fetchOne(
+            'SELECT COUNT(*) AS total FROM servers WHERE name LIKE ? AND deleted_at IS NULL',
+            ['%' . $name . '%']
+        );
+
+        return (int) ($row['total'] ?? 0);
+    }
+
+    /**
+     * @return list<Server>
+     */
     public function filterByIsActive(bool $isActive): array
     {
         $rows = $this->fetchAll('SELECT ' . self::COLUMNS . ' FROM servers WHERE is_active = ? AND deleted_at IS NULL ORDER BY id', [$isActive ? 1 : 0]);
 
         return array_map(fn (array $r) => $this->mapRowToServer($r), $rows);
+    }
+
+    /**
+     * @return list<Server>
+     */
+    public function filterByIsActivePaginated(bool $isActive, int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $rows = $this->fetchAll(
+            'SELECT ' . self::COLUMNS . ' FROM servers WHERE is_active = ? AND deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?',
+            [$isActive ? 1 : 0, $perPage, $offset]
+        );
+
+        return array_map(fn (array $r) => $this->mapRowToServer($r), $rows);
+    }
+
+    public function countByIsActive(bool $isActive): int
+    {
+        $row = $this->fetchOne(
+            'SELECT COUNT(*) AS total FROM servers WHERE is_active = ? AND deleted_at IS NULL',
+            [$isActive ? 1 : 0]
+        );
+
+        return (int) ($row['total'] ?? 0);
     }
 
     /**

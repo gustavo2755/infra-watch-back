@@ -19,6 +19,9 @@ use App\Resources\SuccessResource;
  */
 final class ServerController
 {
+    private const DEFAULT_PER_PAGE = 10;
+    private const MAX_PER_PAGE = 100;
+
     public function __construct(
         private readonly ServerServiceInterface $serverService,
         private readonly ServiceCheckServiceInterface $serviceCheckService,
@@ -65,16 +68,27 @@ final class ServerController
     {
         $name = $request->getQuery('name');
         $isActive = $request->getQuery('is_active');
+        [$page, $perPage] = $this->resolvePagination($request);
 
         if ($name !== null && $name !== '') {
-            $servers = $this->serverService->filterByName($name);
+            $result = $this->serverService->filterByNamePaginated($name, $page, $perPage);
         } elseif ($isActive !== null && $isActive !== '') {
-            $servers = $this->serverService->filterByIsActive(in_array($isActive, ['1', 'true', 'on'], true));
+            $result = $this->serverService->filterByIsActivePaginated(
+                in_array($isActive, ['1', 'true', 'on'], true),
+                $page,
+                $perPage
+            );
         } else {
-            $servers = $this->serverService->list();
+            $result = $this->serverService->listPaginated($page, $perPage);
         }
 
-        Response::json(SuccessResource::make('Servers retrieved', ServerCollectionResource::make($servers, $this->serviceCheckService)));
+        $meta = $this->buildPaginationMeta($page, $perPage, $result['total']);
+        Response::json(
+            SuccessResource::make(
+                'Servers retrieved',
+                ServerCollectionResource::makePaginated($result['items'], $meta, $this->serviceCheckService)
+            )
+        );
     }
 
     public function destroy(Request $request): void
@@ -84,5 +98,34 @@ final class ServerController
         $this->serverService->delete($id);
 
         Response::json(SuccessResource::make('Server deleted', null));
+    }
+
+    /**
+     * @return array{0: int, 1: int}
+     */
+    private function resolvePagination(Request $request): array
+    {
+        $page = max(1, (int) ($request->getQuery('page') ?? '1'));
+        $perPage = max(1, (int) ($request->getQuery('per_page') ?? (string) self::DEFAULT_PER_PAGE));
+        $perPage = min($perPage, self::MAX_PER_PAGE);
+
+        return [$page, $perPage];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildPaginationMeta(int $page, int $perPage, int $total): array
+    {
+        $totalPages = max(1, (int) ceil($total / $perPage));
+
+        return [
+            'page' => $page,
+            'per_page' => $perPage,
+            'total' => $total,
+            'total_pages' => $totalPages,
+            'has_next' => $page < $totalPages,
+            'has_prev' => $page > 1,
+        ];
     }
 }

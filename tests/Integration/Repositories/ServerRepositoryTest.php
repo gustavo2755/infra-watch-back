@@ -99,6 +99,21 @@ final class ServerRepositoryTest extends DatabaseTestCase
         $this->assertGreaterThanOrEqual(1, count($inactive));
     }
 
+    public function testListPaginatedAndCount(): void
+    {
+        $this->repository->create(new Server(null, 'Paginated A', null, '10.10.0.1'));
+        $this->repository->create(new Server(null, 'Paginated B', null, '10.10.0.2'));
+        $this->repository->create(new Server(null, 'Paginated C', null, '10.10.0.3'));
+
+        $pageOne = $this->repository->listPaginated(1, 2);
+        $pageTwo = $this->repository->listPaginated(2, 2);
+        $total = $this->repository->countAll();
+
+        $this->assertCount(2, $pageOne);
+        $this->assertGreaterThanOrEqual(1, count($pageTwo));
+        $this->assertGreaterThanOrEqual(3, $total);
+    }
+
     public function testCreateFailsWhenForeignKeyViolated(): void
     {
         $this->expectException(\PDOException::class);

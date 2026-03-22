@@ -74,6 +74,27 @@ final class ServiceCheckRepository extends BaseRepository
     }
 
     /**
+     * @return list<ServiceCheck>
+     */
+    public function listPaginated(int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $rows = $this->fetchAll(
+            'SELECT id, name, slug, description, created_at, updated_at, deleted_at FROM service_checks WHERE deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?',
+            [$perPage, $offset]
+        );
+
+        return array_map(fn (array $r) => $this->mapRowToServiceCheck($r), $rows);
+    }
+
+    public function countAll(): int
+    {
+        $row = $this->fetchOne('SELECT COUNT(*) AS total FROM service_checks WHERE deleted_at IS NULL');
+
+        return (int) ($row['total'] ?? 0);
+    }
+
+    /**
      * @param array<string, mixed> $row
      */
     private function mapRowToServiceCheck(array $row): ServiceCheck

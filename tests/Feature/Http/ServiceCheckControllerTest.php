@@ -23,30 +23,30 @@ final class ServiceCheckControllerTest extends HttpTestCase
     public function testCreateSuccess(): void
     {
         $result = $this->request('POST', '/api/service-checks', [
-            'name' => 'Redis',
-            'slug' => 'redis',
+            'name' => 'Redis Test',
+            'slug' => 'test-redis-ctrl',
             'description' => 'Cache server',
         ], [], $this->getAuthHeaders());
 
         $this->assertSame(201, $result['statusCode']);
         $this->assertTrue($result['body']['success'] ?? false);
         $this->assertSame('Service check created', $result['body']['message'] ?? '');
-        $this->assertSame('Redis', $result['body']['data']['name'] ?? '');
-        $this->assertSame('redis', $result['body']['data']['slug'] ?? '');
+        $this->assertSame('Redis Test', $result['body']['data']['name'] ?? '');
+        $this->assertSame('test-redis-ctrl', $result['body']['data']['slug'] ?? '');
     }
 
     public function testUpdateSuccess(): void
     {
         $create = $this->request('POST', '/api/service-checks', [
-            'name' => 'Memcached',
-            'slug' => 'memcached',
+            'name' => 'Memcached Test',
+            'slug' => 'test-memcached-ctrl',
             'description' => null,
         ], [], $this->getAuthHeaders());
         $id = $create['body']['data']['id'] ?? 0;
 
         $result = $this->request('PUT', '/api/service-checks/' . $id, [
             'name' => 'Memcached Updated',
-            'slug' => 'memcached',
+            'slug' => 'test-memcached-ctrl',
         ], [], $this->getAuthHeaders());
 
         $this->assertSame(200, $result['statusCode']);
@@ -84,6 +84,26 @@ final class ServiceCheckControllerTest extends HttpTestCase
         $this->assertSame(200, $result['statusCode']);
         $this->assertArrayHasKey('data', $result['body']);
         $this->assertArrayHasKey('data', $result['body']['data']);
+        $this->assertArrayHasKey('meta', $result['body']['data']);
+        $this->assertSame(10, $result['body']['data']['meta']['per_page'] ?? null);
+    }
+
+    public function testListPaginationWithPageAndPerPage(): void
+    {
+        for ($i = 1; $i <= 8; $i++) {
+            $this->request('POST', '/api/service-checks', [
+                'name' => 'Custom check ' . $i,
+                'slug' => 'custom-check-' . $i,
+                'description' => null,
+            ], [], $this->getAuthHeaders());
+        }
+
+        $result = $this->request('GET', '/api/service-checks', [], ['page' => '2', 'per_page' => '3'], $this->getAuthHeaders());
+
+        $this->assertSame(200, $result['statusCode']);
+        $this->assertCount(3, $result['body']['data']['data'] ?? []);
+        $this->assertSame(2, $result['body']['data']['meta']['page'] ?? null);
+        $this->assertSame(3, $result['body']['data']['meta']['per_page'] ?? null);
     }
 
     public function testFindBySlug(): void
@@ -388,6 +408,7 @@ final class ServiceCheckControllerTest extends HttpTestCase
 
         $this->assertSame(200, $result['statusCode']);
         $this->assertArrayHasKey('data', $result['body']['data']);
+        $this->assertArrayHasKey('meta', $result['body']['data']);
         $this->assertGreaterThanOrEqual(4, count($result['body']['data']['data'] ?? []));
 
         $this->request('POST', '/api/servers/' . $serverId . '/service-checks/1', [], [], $this->getAuthHeaders());
@@ -395,6 +416,44 @@ final class ServiceCheckControllerTest extends HttpTestCase
         $availableSlugs = array_column($afterLink['body']['data']['data'] ?? [], 'slug');
 
         $this->assertNotContains('nginx', $availableSlugs);
+    }
+
+    public function testListAvailableServiceChecksByServerPagination(): void
+    {
+        $serverPayload = [
+            'name' => 'Paginated Available Server',
+            'description' => null,
+            'ip_address' => '10.0.0.55',
+            'is_active' => true,
+            'monitor_resources' => true,
+            'cpu_total' => 4,
+            'ram_total' => 8,
+            'disk_total' => 100,
+            'check_interval_seconds' => 60,
+            'retention_days' => 30,
+            'cpu_alert_threshold' => 90,
+            'ram_alert_threshold' => 90,
+            'disk_alert_threshold' => 90,
+            'bandwidth_alert_threshold' => 100,
+            'alert_cpu_enabled' => true,
+            'alert_ram_enabled' => true,
+            'alert_disk_enabled' => true,
+            'alert_bandwidth_enabled' => true,
+        ];
+        $serverRes = $this->request('POST', '/api/servers', $serverPayload, [], $this->getAuthHeaders());
+        $serverId = $serverRes['body']['data']['id'] ?? 0;
+
+        $result = $this->request(
+            'GET',
+            '/api/servers/' . $serverId . '/service-checks/available',
+            [],
+            ['page' => '1', 'per_page' => '2'],
+            $this->getAuthHeaders()
+        );
+
+        $this->assertSame(200, $result['statusCode']);
+        $this->assertCount(2, $result['body']['data']['data'] ?? []);
+        $this->assertSame(2, $result['body']['data']['meta']['per_page'] ?? null);
     }
 
     public function testUpdateWithValidationError(): void

@@ -27,5 +27,6 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 $seeder = new Database\Seeders\DatabaseSeeder($pdo);
 $seeder->run();
+$seeder->runDemoData();
 
 echo "Seeds completed.\n";

@@ -60,11 +60,53 @@ final class MonitoringLogRepository extends BaseRepository
     /**
      * @return list<MonitoringLog>
      */
+    public function listByServerIdPaginated(int $serverId, int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $rows = $this->fetchAll(
+            'SELECT ' . self::COLUMNS . ' FROM monitoring_logs WHERE server_id = ? ORDER BY checked_at DESC, id DESC LIMIT ? OFFSET ?',
+            [$serverId, $perPage, $offset]
+        );
+
+        return array_map(fn (array $row) => $this->mapRowToMonitoringLog($row), $rows);
+    }
+
+    public function countByServerId(int $serverId): int
+    {
+        $row = $this->fetchOne('SELECT COUNT(*) AS total FROM monitoring_logs WHERE server_id = ?', [$serverId]);
+
+        return (int) ($row['total'] ?? 0);
+    }
+
+    /**
+     * @return list<MonitoringLog>
+     */
     public function listRecent(int $limit = 20): array
     {
         $rows = $this->fetchAll('SELECT ' . self::COLUMNS . ' FROM monitoring_logs ORDER BY checked_at DESC, id DESC LIMIT ?', [$limit]);
 
         return array_map(fn (array $row) => $this->mapRowToMonitoringLog($row), $rows);
+    }
+
+    /**
+     * @return list<MonitoringLog>
+     */
+    public function listRecentPaginated(int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $rows = $this->fetchAll(
+            'SELECT ' . self::COLUMNS . ' FROM monitoring_logs ORDER BY checked_at DESC, id DESC LIMIT ? OFFSET ?',
+            [$perPage, $offset]
+        );
+
+        return array_map(fn (array $row) => $this->mapRowToMonitoringLog($row), $rows);
+    }
+
+    public function countAll(): int
+    {
+        $row = $this->fetchOne('SELECT COUNT(*) AS total FROM monitoring_logs');
+
+        return (int) ($row['total'] ?? 0);
     }
 
     /**
@@ -92,6 +134,49 @@ final class MonitoringLogRepository extends BaseRepository
     /**
      * @return list<MonitoringLog>
      */
+    public function listByPeriodPaginated(string $from, string $to, ?int $serverId, int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+
+        if ($serverId === null) {
+            $rows = $this->fetchAll(
+                'SELECT ' . self::COLUMNS . ' FROM monitoring_logs WHERE checked_at BETWEEN ? AND ? ORDER BY checked_at DESC, id DESC LIMIT ? OFFSET ?',
+                [$from, $to, $perPage, $offset]
+            );
+
+            return array_map(fn (array $row) => $this->mapRowToMonitoringLog($row), $rows);
+        }
+
+        $rows = $this->fetchAll(
+            'SELECT ' . self::COLUMNS . ' FROM monitoring_logs WHERE server_id = ? AND checked_at BETWEEN ? AND ? ORDER BY checked_at DESC, id DESC LIMIT ? OFFSET ?',
+            [$serverId, $from, $to, $perPage, $offset]
+        );
+
+        return array_map(fn (array $row) => $this->mapRowToMonitoringLog($row), $rows);
+    }
+
+    public function countByPeriod(string $from, string $to, ?int $serverId = null): int
+    {
+        if ($serverId === null) {
+            $row = $this->fetchOne(
+                'SELECT COUNT(*) AS total FROM monitoring_logs WHERE checked_at BETWEEN ? AND ?',
+                [$from, $to]
+            );
+
+            return (int) ($row['total'] ?? 0);
+        }
+
+        $row = $this->fetchOne(
+            'SELECT COUNT(*) AS total FROM monitoring_logs WHERE server_id = ? AND checked_at BETWEEN ? AND ?',
+            [$serverId, $from, $to]
+        );
+
+        return (int) ($row['total'] ?? 0);
+    }
+
+    /**
+     * @return list<MonitoringLog>
+     */
     public function listAlerts(?int $serverId = null): array
     {
         if ($serverId === null) {
@@ -106,11 +191,86 @@ final class MonitoringLogRepository extends BaseRepository
     }
 
     /**
+     * @return list<MonitoringLog>
+     */
+    public function listAlertsPaginated(?int $serverId, int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+
+        if ($serverId === null) {
+            $rows = $this->fetchAll(
+                'SELECT ' . self::COLUMNS . ' FROM monitoring_logs WHERE is_alert = 1 ORDER BY checked_at DESC, id DESC LIMIT ? OFFSET ?',
+                [$perPage, $offset]
+            );
+
+            return array_map(fn (array $row) => $this->mapRowToMonitoringLog($row), $rows);
+        }
+
+        $rows = $this->fetchAll(
+            'SELECT ' . self::COLUMNS . ' FROM monitoring_logs WHERE is_alert = 1 AND server_id = ? ORDER BY checked_at DESC, id DESC LIMIT ? OFFSET ?',
+            [$serverId, $perPage, $offset]
+        );
+
+        return array_map(fn (array $row) => $this->mapRowToMonitoringLog($row), $rows);
+    }
+
+    public function countAlerts(?int $serverId = null): int
+    {
+        if ($serverId === null) {
+            $row = $this->fetchOne('SELECT COUNT(*) AS total FROM monitoring_logs WHERE is_alert = 1');
+
+            return (int) ($row['total'] ?? 0);
+        }
+
+        $row = $this->fetchOne(
+            'SELECT COUNT(*) AS total FROM monitoring_logs WHERE is_alert = 1 AND server_id = ?',
+            [$serverId]
+        );
+
+        return (int) ($row['total'] ?? 0);
+    }
+
+    /**
      * @throws PDOException
      */
     public function deleteOlderThan(string $cutoff): int
     {
+        $this->execute(
+            'DELETE FROM monitoring_log_service_checks WHERE monitoring_log_id IN (SELECT id FROM monitoring_logs WHERE checked_at < ?)',
+            [$cutoff]
+        );
         $stmt = $this->execute('DELETE FROM monitoring_logs WHERE checked_at < ?', [$cutoff]);
+
+        return $stmt->rowCount();
+    }
+
+    /**
+     * @throws PDOException
+     */
+    public function deleteOlderThanByServer(int $serverId, string $cutoff): int
+    {
+        $this->execute(
+            'DELETE FROM monitoring_log_service_checks WHERE monitoring_log_id IN (SELECT id FROM monitoring_logs WHERE server_id = ? AND checked_at < ?)',
+            [$serverId, $cutoff]
+        );
+        $stmt = $this->execute(
+            'DELETE FROM monitoring_logs WHERE server_id = ? AND checked_at < ?',
+            [$serverId, $cutoff]
+        );
+
+        return $stmt->rowCount();
+    }
+
+    /**
+     * @throws PDOException
+     */
+    public function deleteByServerId(int $serverId): int
+    {
+        $this->execute(
+            'DELETE FROM monitoring_log_service_checks WHERE monitoring_log_id IN (SELECT id FROM monitoring_logs WHERE server_id = ?)',
+            [$serverId]
+        );
+        $stmt = $this->execute('DELETE FROM monitoring_logs WHERE server_id = ?', [$serverId]);
 
         return $stmt->rowCount();
     }
@@ -123,6 +283,20 @@ final class MonitoringLogRepository extends BaseRepository
         $rows = $this->fetchAll(
             'SELECT ' . self::COLUMNS . ' FROM monitoring_logs WHERE server_id = ? ORDER BY checked_at DESC, id DESC LIMIT ?',
             [$serverId, $limit]
+        );
+
+        return array_map(fn (array $row) => $this->mapRowToMonitoringLog($row), $rows);
+    }
+
+    /**
+     * @return list<MonitoringLog>
+     */
+    public function listForDashboardPaginated(int $serverId, int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $rows = $this->fetchAll(
+            'SELECT ' . self::COLUMNS . ' FROM monitoring_logs WHERE server_id = ? ORDER BY checked_at DESC, id DESC LIMIT ? OFFSET ?',
+            [$serverId, $perPage, $offset]
         );
 
         return array_map(fn (array $row) => $this->mapRowToMonitoringLog($row), $rows);

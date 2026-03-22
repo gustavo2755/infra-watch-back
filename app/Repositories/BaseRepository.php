@@ -31,8 +31,27 @@ abstract class BaseRepository
     protected function execute(string $sql, array $params = []): \PDOStatement
     {
         $stmt = $this->pdo->prepare($sql);
+        foreach ($params as $index => $value) {
+            $position = $index + 1;
+            if (is_int($value)) {
+                $stmt->bindValue($position, $value, PDO::PARAM_INT);
+                continue;
+            }
 
-        $stmt->execute($params);
+            if (is_bool($value)) {
+                $stmt->bindValue($position, $value, PDO::PARAM_BOOL);
+                continue;
+            }
+
+            if ($value === null) {
+                $stmt->bindValue($position, null, PDO::PARAM_NULL);
+                continue;
+            }
+
+            $stmt->bindValue($position, (string) $value, PDO::PARAM_STR);
+        }
+
+        $stmt->execute();
 
         return $stmt;
     }

@@ -36,4 +36,19 @@ interface ServerServiceInterface
      * @return list<Server>
      */
     public function filterByIsActive(bool $isActive): array;
+
+    /**
+     * @return array{items: list<Server>, total: int}
+     */
+    public function listPaginated(int $page, int $perPage): array;
+
+    /**
+     * @return array{items: list<Server>, total: int}
+     */
+    public function filterByNamePaginated(string $name, int $page, int $perPage): array;
+
+    /**
+     * @return array{items: list<Server>, total: int}
+     */
+    public function filterByIsActivePaginated(bool $isActive, int $page, int $perPage): array;
 }

@@ -113,19 +113,4 @@ final class ServiceCheck
         return $this;
     }
 
-    /**
-     * @param array{name: string, slug: string, description?: string|null} $data Validated payload (e.g. from StoreServiceCheckRequest)
-     */
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            null,
-            $data['name'],
-            $data['slug'],
-            $data['description'] ?? null,
-            null,
-            null,
-            null
-        );
-    }
 }

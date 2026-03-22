@@ -42,4 +42,14 @@ interface ServiceCheckServiceInterface
      * @return list<ServiceCheck>
      */
     public function listAvailableByServerId(int $serverId): array;
+
+    /**
+     * @return array{items: list<ServiceCheck>, total: int}
+     */
+    public function listPaginated(int $page, int $perPage): array;
+
+    /**
+     * @return array{items: list<ServiceCheck>, total: int}
+     */
+    public function listAvailableByServerIdPaginated(int $serverId, int $page, int $perPage): array;
 }

@@ -21,6 +21,14 @@ final class ServiceCheckSeeder
             ['MySQL', 'mysql', 'Database server'],
             ['Apache', 'apache2', 'Web server'],
             ['PHP-FPM', 'php-fpm', 'PHP process manager'],
+            ['Redis', 'redis', 'In-memory store'],
+            ['Memcached', 'memcached', 'Distributed cache'],
+            ['PostgreSQL', 'postgresql', 'Relational database'],
+            ['MongoDB', 'mongodb', 'Document database'],
+            ['Elasticsearch', 'elasticsearch', 'Search and analytics'],
+            ['RabbitMQ', 'rabbitmq', 'Message broker'],
+            ["Certbot", 'certbot', 'TLS certificates'],
+            ['Prometheus', 'prometheus', 'Metrics collection'],
         ];
 
         $existsStmt = $this->pdo->prepare('SELECT 1 FROM service_checks WHERE slug = ?');

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\OpenApi;
 
 /**
- * Builds OpenAPI 3.0.3 specification for Part 1 API.
+ * Builds OpenAPI 3.0.3 specification for Infra Watch API.
  */
 final class OpenApiSpec
 {
@@ -18,8 +18,8 @@ final class OpenApiSpec
             'openapi' => '3.0.3',
             'info' => [
                 'title' => 'Infra Watch API',
-                'version' => '1.0',
-                'description' => 'API for server and service check management with JWT authentication.',
+                'version' => '2.0',
+                'description' => 'API for server, service check and monitoring log management with JWT authentication.',
             ],
             'servers' => [
                 ['url' => '/'],
@@ -165,6 +165,7 @@ final class OpenApiSpec
                 'properties' => [
                     'data' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/Server']],
                     'count' => ['type' => 'integer'],
+                    'meta' => ['$ref' => '#/components/schemas/PaginationMeta'],
                 ],
             ],
             'ServiceCheck' => [
@@ -200,6 +201,61 @@ final class OpenApiSpec
                 'properties' => [
                     'data' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/ServiceCheck']],
                     'count' => ['type' => 'integer'],
+                    'meta' => ['$ref' => '#/components/schemas/PaginationMeta'],
+                ],
+            ],
+            'MonitoringLogServiceCheck' => [
+                'type' => 'object',
+                'properties' => [
+                    'id' => ['type' => 'integer'],
+                    'monitoring_log_id' => ['type' => 'integer'],
+                    'service_check_id' => ['type' => 'integer'],
+                    'is_running' => ['type' => 'boolean'],
+                    'output_message' => ['type' => 'string', 'nullable' => true],
+                    'created_at' => ['type' => 'string', 'nullable' => true],
+                    'updated_at' => ['type' => 'string', 'nullable' => true],
+                ],
+            ],
+            'MonitoringLog' => [
+                'type' => 'object',
+                'properties' => [
+                    'id' => ['type' => 'integer'],
+                    'server_id' => ['type' => 'integer'],
+                    'checked_at' => ['type' => 'string', 'nullable' => true],
+                    'is_up' => ['type' => 'boolean'],
+                    'cpu_usage_percent' => ['type' => 'number', 'nullable' => true],
+                    'ram_usage_percent' => ['type' => 'number', 'nullable' => true],
+                    'disk_usage_percent' => ['type' => 'number', 'nullable' => true],
+                    'bandwidth_usage_percent' => ['type' => 'number', 'nullable' => true],
+                    'is_alert' => ['type' => 'boolean'],
+                    'alert_type' => ['type' => 'string', 'nullable' => true],
+                    'error_message' => ['type' => 'string', 'nullable' => true],
+                    'sent_to_email' => ['type' => 'string', 'nullable' => true],
+                    'created_at' => ['type' => 'string', 'nullable' => true],
+                    'updated_at' => ['type' => 'string', 'nullable' => true],
+                    'service_checks' => [
+                        'type' => 'array',
+                        'items' => ['$ref' => '#/components/schemas/MonitoringLogServiceCheck'],
+                    ],
+                ],
+            ],
+            'MonitoringLogCollection' => [
+                'type' => 'object',
+                'properties' => [
+                    'data' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/MonitoringLog']],
+                    'count' => ['type' => 'integer'],
+                    'meta' => ['$ref' => '#/components/schemas/PaginationMeta'],
+                ],
+            ],
+            'PaginationMeta' => [
+                'type' => 'object',
+                'properties' => [
+                    'page' => ['type' => 'integer', 'example' => 1],
+                    'per_page' => ['type' => 'integer', 'example' => 10],
+                    'total' => ['type' => 'integer', 'example' => 42],
+                    'total_pages' => ['type' => 'integer', 'example' => 5],
+                    'has_next' => ['type' => 'boolean', 'example' => true],
+                    'has_prev' => ['type' => 'boolean', 'example' => false],
                 ],
             ],
             'ErrorResponse' => [
@@ -311,6 +367,8 @@ final class OpenApiSpec
                     'parameters' => [
                         ['name' => 'name', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string']],
                         ['name' => 'is_active', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string', 'enum' => ['1', '0', 'true', 'false', 'on', 'off']]],
+                        ['name' => 'page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 1, 'minimum' => 1]],
+                        ['name' => 'per_page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 10, 'minimum' => 1, 'maximum' => 100]],
                     ],
                     'responses' => [
                         '200' => [
@@ -444,6 +502,10 @@ final class OpenApiSpec
                 ],
                 'get' => [
                     'summary' => 'List service checks',
+                    'parameters' => [
+                        ['name' => 'page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 1, 'minimum' => 1]],
+                        ['name' => 'per_page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 10, 'minimum' => 1, 'maximum' => 100]],
+                    ],
                     'responses' => [
                         '200' => [
                             'description' => 'Service checks retrieved',
@@ -573,7 +635,11 @@ final class OpenApiSpec
             '/api/servers/{serverId}/service-checks/available' => [
                 'get' => [
                     'summary' => 'List service checks available to link (not yet linked to server)',
-                    'parameters' => [['name' => 'serverId', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']]],
+                    'parameters' => [
+                        ['name' => 'serverId', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
+                        ['name' => 'page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 1, 'minimum' => 1]],
+                        ['name' => 'per_page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 10, 'minimum' => 1, 'maximum' => 100]],
+                    ],
                     'responses' => [
                         '200' => [
                             'description' => 'Available service checks',
@@ -589,6 +655,7 @@ final class OpenApiSpec
                                                 'properties' => [
                                                     'data' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/ServiceCheck']],
                                                     'count' => ['type' => 'integer'],
+                                                    'meta' => ['$ref' => '#/components/schemas/PaginationMeta'],
                                                 ],
                                             ],
                                         ],
@@ -645,6 +712,124 @@ final class OpenApiSpec
                         ],
                         '401' => ['description' => 'Unauthorized', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
                         '404' => ['description' => 'Server, service check or link not found', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                    ],
+                ],
+            ],
+            '/api/monitoring-logs' => [
+                'get' => [
+                    'summary' => 'List monitoring logs',
+                    'parameters' => [
+                        ['name' => 'server_id', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer']],
+                        ['name' => 'from', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string']],
+                        ['name' => 'to', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string']],
+                        ['name' => 'alerts_only', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string', 'enum' => ['1', '0', 'true', 'false', 'on', 'off']]],
+                        ['name' => 'page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 1, 'minimum' => 1]],
+                        ['name' => 'per_page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 50, 'minimum' => 1, 'maximum' => 200]],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Monitoring logs retrieved',
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => [
+                                        'type' => 'object',
+                                        'properties' => [
+                                            'success' => ['type' => 'boolean'],
+                                            'message' => ['type' => 'string'],
+                                            'data' => ['$ref' => '#/components/schemas/MonitoringLogCollection'],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        '401' => ['description' => 'Unauthorized', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                    ],
+                ],
+            ],
+            '/api/monitoring-logs/{id}' => [
+                'get' => [
+                    'summary' => 'Get monitoring log details',
+                    'parameters' => [
+                        ['name' => 'id', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Monitoring log retrieved',
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => [
+                                        'type' => 'object',
+                                        'properties' => [
+                                            'success' => ['type' => 'boolean'],
+                                            'message' => ['type' => 'string'],
+                                            'data' => ['$ref' => '#/components/schemas/MonitoringLog'],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        '401' => ['description' => 'Unauthorized', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '404' => ['description' => 'Monitoring log not found', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                    ],
+                ],
+            ],
+            '/api/servers/{serverId}/monitoring-logs' => [
+                'get' => [
+                    'summary' => 'List monitoring logs by server',
+                    'parameters' => [
+                        ['name' => 'serverId', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
+                        ['name' => 'page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 1, 'minimum' => 1]],
+                        ['name' => 'per_page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 50, 'minimum' => 1, 'maximum' => 200]],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Monitoring logs retrieved',
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => [
+                                        'type' => 'object',
+                                        'properties' => [
+                                            'success' => ['type' => 'boolean'],
+                                            'message' => ['type' => 'string'],
+                                            'data' => ['$ref' => '#/components/schemas/MonitoringLogCollection'],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        '401' => ['description' => 'Unauthorized', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                        '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
+                    ],
+                ],
+            ],
+            '/api/servers/{serverId}/monitoring-logs/dashboard' => [
+                'get' => [
+                    'summary' => 'List monitoring logs for dashboard',
+                    'parameters' => [
+                        ['name' => 'serverId', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer']],
+                        ['name' => 'page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 1, 'minimum' => 1]],
+                        ['name' => 'per_page', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 50, 'minimum' => 1, 'maximum' => 200]],
+                    ],
+                    'responses' => [
+                        '200' => [
+                            'description' => 'Monitoring dashboard logs retrieved',
+                            'content' => [
+                                'application/json' => [
+                                    'schema' => [
+                                        'type' => 'object',
+                                        'properties' => [
+                                            'success' => ['type' => 'boolean'],
+                                            'message' => ['type' => 'string'],
+                                            'data' => ['$ref' => '#/components/schemas/MonitoringLogCollection'],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        '401' => ['description' => 'Unauthorized', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
                         '500' => ['description' => 'Server error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ErrorResponse']]]],
                     ],
                 ],
